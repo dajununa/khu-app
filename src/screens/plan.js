@@ -8,6 +8,7 @@ import { attachPanZoom } from '../lib/panzoom.js';
 const EVAC_PLANS = {
   '1F': { enabled: true, jsons: ['/plans/f1-evac-portrait.v2.json', '/plans/f1-evac-portrait.json', '/plans/f1-evac.json'] }, // 세로 도면 v2(정렬 재계산) → 옛 세로 도면 → 가로 도면
   '4F': { enabled: true, jsons: ['/plans/f4-evac.json'] },
+  '5F': { enabled: true, kind: 'regions', jsons: ['/plans/f5-evac.json'] }, // 3D 좌표와 정렬하지 않은 도면: 호실 영역(rooms[].polygon)을 누르면 그 스캔(scene/waypoint)으로. 실패하면 호실 사각형 화면
 };
 const EVAC_TAP_MAX_M = 3; // 탭 위치에서 이 거리(m) 안에 이동 지점이 없으면 '스캔되지 않은 구역'
 
@@ -24,6 +25,14 @@ export async function plan(floorId) {
   const all = await getWaypoints();
   const wps = (all[SCANNED[floorId]] || []).filter(w => w.floor === floorId);
   const go = (scene, wp) => goTour({ scene, floor: floorId, waypointId: wp.id, mode: 'pin' });
+
+  const evac = EVAC_PLANS[floorId];
+  if (evac?.enabled && evac.kind === 'regions') { // 영역 연결 도면 (정렬 없음). 못 불러오면 아래 호실 사각형 화면으로
+    for (const url of evac.jsons) {
+      const wrap = await regionPlan(url, go, floor.name).catch(() => null);
+      if (wrap) return root.classList.add('plan-full'), root.append(wrap), root;
+    }
+  }
 
   // 복도 스캔 없이 호실 스캔만 있는 층(예: 5층 513호): 호실 사각형만 보여 준다
   const rooms = ROOMS[floorId] || [];
@@ -48,8 +57,7 @@ export async function plan(floorId) {
   const lines = (cls, sw) => h('g', { class: cls, 'stroke-width': sw }, segs.map(([a, b]) => h('line', { x1: a[0], y1: a[1], x2: b[0], y2: b[1] })));
 
   const lab = POINT_LABELS[floorId] || {};
-  const evac = EVAC_PLANS[floorId];
-  if (evac?.enabled) {
+  if (evac?.enabled && evac.kind !== 'regions') {
     for (const url of evac.jsons) {
       const wrap = await evacPlan(url, wps, P, go, lab, floor.name).catch(() => null);
       if (wrap) return root.classList.add('plan-full'), root.append(wrap), root; // 상단 바를 뺀 화면 전체를 도면이 쓴다
@@ -95,4 +103,25 @@ async function evacPlan(metaUrl, wps, P, go, lab, name) {
     if (best && bd <= EVAC_TAP_MAX_M) go(best.scene, best); else toast('스캔되지 않은 구역입니다');
   } });
   return h('div', { class: 'plan-wrap evac' }, svg, h('div', { class: 'plan-hint' }, '도면을 눌러 3D로 이동 · 두 손가락으로 확대'));
+}
+
+// 도면 이미지 위에 호실 영역을 얹은 평면도 (3D 좌표 정렬 없음). 도면 px 좌표계의 viewBox 를 쓰고, 영역을 누르면 그 호실의 3D 스캔으로 들어간다.
+async function regionPlan(metaUrl, go, name) {
+  const res = await fetch(metaUrl);
+  if (!res.ok) throw new Error(metaUrl);
+  const meta = await res.json(), [iw, ih] = meta.image.size, rooms = (meta.rooms || []).filter(r => r.polygon?.length >= 3 && r.scene && r.waypoint);
+  if (!rooms.length) throw new Error('rooms');
+  const img = document.createElementNS('http://www.w3.org/2000/svg', 'image');
+  img.setAttribute('href', '/plans/' + meta.image.file); img.setAttribute('width', iw); img.setAttribute('height', ih);
+  const badge = r => { const [x0, y0, x1, y1] = r.bbox, cx = (x0 + x1) / 2, cy = (y0 + y1) / 2 - 22; // 라벨(방 번호) 위쪽에 '3D 스캔' 표시
+    return h('g', { class: 'region-badge' }, h('rect', { x: cx - 27, y: cy - 9, width: 54, height: 18, rx: 9 }), h('text', { x: cx, y: cy + 4.5 }, '3D 스캔')); };
+  const inPoly = (poly, x, y) => { let c = false; for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) { const [xi, yi] = poly[i], [xj, yj] = poly[j]; if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) c = !c; } return c; };
+  const svg = h('svg', { class: 'plan evac', viewBox: `0 0 ${iw} ${ih}`, role: 'group', 'aria-label': `${name} 평면도` }, img,
+    ...rooms.map(r => h('polygon', { class: 'region', points: r.polygon.map(p => p.join(',')).join(' ') })), ...rooms.map(badge));
+  const names = rooms.map(r => r.name).join(', ');
+  attachPanZoom(svg, { x: 0, y: 0, w: iw, h: ih }, { onTap: (cx, cy) => {
+    const p = new DOMPoint(cx, cy).matrixTransform(svg.getScreenCTM().inverse()), hit = rooms.find(r => inPoly(r.polygon, p.x, p.y));
+    if (hit) go(hit.scene, { id: hit.waypoint }); else toast(`스캔이 없는 구역입니다. ${names}만 3D로 볼 수 있어요`);
+  } });
+  return h('div', { class: 'plan-wrap evac' }, svg, h('div', { class: 'plan-hint' }, `${names}를 누르면 3D 스캔으로 이동 · 두 손가락으로 확대`));
 }

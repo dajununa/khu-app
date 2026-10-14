@@ -1,0 +1,132 @@
+{
+ "id": "f5",
+ "name": "5층",
+ "generated": "2026-10-14T05:49:03.646Z",
+ "note": "3D 스캔 좌표와 정렬하지 않은 도면. rooms[].polygon 은 이 이미지 px 기준 영역으로, 누르면 scene/waypoint 의 3D 투어로 들어간다.",
+ "source": {
+  "file": "plans-source/f5-evac.png",
+  "size": [
+   824,
+   1060
+  ],
+  "crop": [
+   405,
+   120,
+   395,
+   914
+  ],
+  "eraseExtra": [
+   [
+    405,
+    1013,
+    411,
+    1034
+   ]
+  ],
+  "eraseStats": {
+   "maskedPx": 24863,
+   "holesFilled": 19
+  }
+ },
+ "image": {
+  "file": "f5-evac.webp",
+  "size": [
+   395,
+   914
+  ],
+  "bytes": 23128,
+  "alpha": false,
+  "pxPerSourcePx": 1
+ },
+ "rooms": [
+  {
+   "id": "513",
+   "name": "513호",
+   "polygon": [
+    [
+     163,
+     126
+    ],
+    [
+     163,
+     138
+    ],
+    [
+     177,
+     139
+    ],
+    [
+     175,
+     148
+    ],
+    [
+     163,
+     156
+    ],
+    [
+     163,
+     301
+    ],
+    [
+     174,
+     308
+    ],
+    [
+     177,
+     319
+    ],
+    [
+     279,
+     319
+    ],
+    [
+     279,
+     126
+    ]
+   ],
+   "bbox": [
+    163,
+    126,
+    279,
+    320
+   ],
+   "labelBbox": [
+    217,
+    216,
+    234,
+    223
+   ],
+   "scene": "classroom513",
+   "waypoint": "classroom513-5F-011",
+   "candidates": [
+    {
+     "waypoint": "classroom513-5F-001",
+     "distM": 2.83,
+     "estimated": true
+    },
+    {
+     "waypoint": "classroom513-5F-002",
+     "distM": 3.37,
+     "estimated": true
+    },
+    {
+     "waypoint": "classroom513-5F-011",
+     "distM": 4.84,
+     "estimated": true
+    }
+   ],
+   "door": {
+    "which": "서쪽 벽 남쪽 문",
+    "sourcePx": [
+     566,
+     430.5
+    ],
+    "gapY": [
+     424,
+     437
+    ]
+   }
+  }
+ ],
+ "candidatesNote": "추정: 513호를 직사각형으로 보고 도면 방 모서리 4개를 스캔 방(메쉬 단면 최소 면적 사각형) 모서리 4개에 대응시켰다. 긴 변끼리 대응하는 방향은 2가지이며, 방향 2를 기본으로 골랐지만 근거는 약하다: 벽 바깥 띠 밝기 차이가 작고(위 227 / 아래 217), 책상이 없는 앞쪽 빈 바닥과 시작점(000)이 아래 오른쪽 모서리 근처에 있는 점이 방향 2(문이 그 모서리 쪽)와 맞는다. 방향 1이면 남쪽 문은 반대편 모서리(약 12.6 m)가 된다. 오차 수 m 가능. 눈으로 확인 후 rooms[0].waypoint 를 정할 것."
+}
