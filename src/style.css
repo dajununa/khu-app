@@ -357,3 +357,5 @@ a.iconbtn { color: var(--ink); }
 .legend i.ic { width: 20px; height: 20px; border-radius: 50%; border: 0; font-size: 8.5px; margin-right: 5px; vertical-align: -5px; }
 .plan.fp .mk-l { font-size: .7px; stroke-width: .22px; }
 .admin-mode > .pad, .admin-mode > .list { padding-top: 14px; }
+.sample-note { margin: 0 16px 12px; padding: 10px 12px; border-radius: 12px; background: color-mix(in srgb, #1f5fa8 10%, var(--surface)); color: var(--ink); font-size: 13px; border: 1px dashed color-mix(in srgb, #1f5fa8 40%, var(--line)); }
+.pad > .sample-note { margin: 0 0 12px; }
