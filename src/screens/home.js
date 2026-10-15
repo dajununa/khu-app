@@ -1,6 +1,26 @@
 import { h } from '../lib/dom.js';
 import { FLOORS, SCANNED } from '../data/config.js';
 
+// 도움말: 새 화면이 아니라 홈 위에 작은 창으로 뜬다
+function openHelp() {
+  const close = () => { bg.remove(); document.removeEventListener('keydown', onKey); };
+  const onKey = e => e.key === 'Escape' && close();
+  const closeBtn = h('button', { class: 'btn block', type: 'button', onClick: close }, '닫기');
+  const bg = h('div', { class: 'modal-bg', onClick: e => e.target === bg && close() },
+    h('div', { class: 'modal', role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'help-ttl' },
+      h('h2', { id: 'help-ttl' }, '이용 방법'),
+      h('ol', {},
+        h('li', {}, h('b', {}, '층 선택'), h('span', {}, '건물 그림에서 신고할 층을 눌러요.')),
+        h('li', {}, h('b', {}, '위치 찾기'), h('span', {}, '평면도에서 가까운 곳을 누르면 3D 스캔으로 이동해요. 화면을 드래그해 둘러보고, 화살표로 이동해요.')),
+        h('li', {}, h('b', {}, '핀하기'), h('span', {}, '문제가 있는 곳을 십자선에 맞추고 핀하기를 눌러요.')),
+        h('li', {}, h('b', {}, '신고 접수'), h('span', {}, '항목(누수, 조명, 지갑 등)을 고르면 끝! 사진과 설명은 필요할 때만 적어요.'))),
+      h('p', { class: 'note' }, '신고는 익명이고, 접수현황 탭에서 처리 상태(미확인 → 확인 → 진행 중 → 완료)를 볼 수 있어요.'),
+      closeBtn));
+  document.addEventListener('keydown', onKey);
+  document.getElementById('app').append(bg);
+  closeBtn.focus();
+}
+
 // 건물 입면(단면) 일러스트. 층을 누르면 평면도로 이동.
 export function home() {
   const X = 48, W = 264, FH = 62, TOP = 62, GROUND = TOP + FH * 5;
@@ -34,13 +54,9 @@ export function home() {
   );
   return h('div', {},
     h('div', { class: 'home-head' },
-      h('div', { class: 'kicker' }, '경희대학교 · 생활과학대학'),
+      h('div', { class: 'kickrow' }, h('div', { class: 'kicker' }, '경희대학교 · 생활과학대학'), h('button', { class: 'helpbtn', type: 'button', 'aria-haspopup': 'dialog', onClick: openHelp }, h('span', { class: 'q' }, '?'), '도움말')),
       h('h1', {}, '건물 하자·분실물 신고'),
-      h('p', { class: 'lead' }, '건물 안에서 고장 난 곳을 발견했거나 물건을 잃어버렸나요? 3D 스캔 화면에서 위치를 직접 찍어 신고할 수 있어요.'),
-      h('ol', { class: 'guide', 'aria-label': '이용 방법' },
-        h('li', {}, '아래 건물에서 ', h('em', {}, '층 선택')),
-        h('li', {}, '평면도를 눌러 ', h('em', {}, '3D로 이동 후 핀하기')),
-        h('li', {}, '항목을 고르고 ', h('em', {}, '신고 접수')))),
+      h('p', { class: 'lead' }, '건물 안에서 고장 난 곳을 발견했거나 물건을 잃어버렸나요? 3D 스캔 화면에서 위치를 직접 찍어 신고할 수 있어요.')),
     h('p', { class: 'hint tap-hint' }, '👇 신고할 층을 눌러 주세요'),
     svg,
     h('div', { class: 'legend' }, h('span', {}, h('i', { style: 'background:#f3e3d4' }), '3D 스캔 있음'), h('span', {}, h('i', { style: 'background:#ece7da' }), '준비 중')),
