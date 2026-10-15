@@ -3,6 +3,7 @@ import { home } from './screens/home.js';
 import { plan } from './screens/plan.js';
 import { board } from './screens/board.js';
 import { report } from './screens/report.js';
+import { stairs } from './screens/stairs.js';
 import { openTour } from './screens/tour.js';
 import { nav, draft, resetDraft } from './lib/state.js';
 
@@ -40,6 +41,7 @@ async function route() {
   let el;
   if (name === 'board') { setTab('board'); el = board(); }
   else if (name === 'report') { setTab(null); el = report(); }
+  else if (name === 'stairs') { setTab('home'); el = await stairs(arg); }
   else if (name === 'floor') { setTab('home'); el = await plan(arg); }
   else { setTab('home'); el = home(); }
   if (my !== token) return;

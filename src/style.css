@@ -201,3 +201,36 @@ textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
 .home .home-head .lead { margin: 4px 0 6px; font-size: 13px; line-height: 1.45; }
 .home .elev { flex: 1 1 0; min-height: 0; width: 100%; height: auto; }
 .home .legend { flex: none; margin: 4px 0 8px; font-size: 11.5px; }
+
+/* 홈: 층 사이 계단 */
+.elev .stair { cursor: pointer; }
+.elev .stair .shaft { fill: #e4ded0; stroke: #2b2f3a; stroke-width: 2; }
+.elev .stair.scanned .shaft { fill: #f3e3d4; }
+.elev .stair .steps { fill: #fff; stroke: #2b2f3a; stroke-width: 1.8; stroke-linejoin: round; }
+.elev .stair:active .shaft, .elev .stair:hover .shaft { fill: #e7b9c5; }
+.elev .stl { font: 700 11px -apple-system, sans-serif; fill: #8a1f3d; }
+.elev .stl.s { font-size: 9.5px; }
+.elev .stl.off { fill: #8a8d97; }
+
+/* 스캔 구역: 연한 장밋빛 (파란색 아님) */
+:root { --scan: #e0527f; }
+.plan.evac .scan-zone { opacity: .26; pointer-events: none; }
+.plan.evac .scan-zone line { stroke: var(--scan); stroke-linecap: round; stroke-width: 4.4; }
+.plan.evac .scan-zone circle { fill: var(--scan); }
+.plan.evac .region { fill: var(--scan); fill-opacity: .24; stroke: #c44469; stroke-opacity: .55; stroke-width: 1; }
+.plan.evac .region-badge rect { fill: #c44469; fill-opacity: .85; }
+.plan-legend { position: absolute; left: 10px; top: 8px; display: flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; background: #fffffff0; border: 1px solid var(--line); font-size: 12px; color: #1d1f27; pointer-events: none; }
+.plan-legend i { width: 14px; height: 14px; border-radius: 4px; background: color-mix(in srgb, var(--scan) 30%, #fff); border: 1px solid color-mix(in srgb, var(--scan) 70%, #fff); }
+
+/* 계단 화면 */
+.stairplan { width: 100%; height: auto; max-height: calc(100vh - 220px); display: block; }
+.stairplan .shaft { fill: #fff; stroke: #2b2f3a; stroke-width: 3; }
+.stairplan .flight, .stairplan .landing { fill: #f6f2e8; stroke: #2b2f3a; stroke-width: 2; }
+.stairplan .tread { stroke: #2b2f3a; stroke-width: 1; opacity: .45; }
+.stairplan .zone { fill: var(--scan); fill-opacity: .22; stroke: #c44469; stroke-opacity: .55; stroke-width: 1.5; cursor: pointer; }
+.stairplan .zone.off { fill: #8a8d97; fill-opacity: .14; stroke: #8a8d97; stroke-opacity: .4; cursor: default; }
+.stairplan .zone:hover, .stairplan .zone:active { fill-opacity: .4; }
+.stairplan .well { fill: #e9e4d8; stroke: #2b2f3a; stroke-width: 1.5; }
+.stairplan .arr { fill: none; stroke: #8a1f3d; stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
+.stairplan text { font: 700 13px -apple-system, sans-serif; fill: #2b2f3a; text-anchor: middle; pointer-events: none; paint-order: stroke; stroke: #fff; stroke-width: 3px; }
+.stairplan text.s { font-size: 10.5px; font-weight: 600; fill: #6b6f7b; }

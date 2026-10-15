@@ -1,5 +1,5 @@
 import { h } from '../lib/dom.js';
-import { FLOORS, SCANNED } from '../data/config.js';
+import { FLOORS, SCANNED, STAIR_PAIRS, STAIR_SCANNED, stairName } from '../data/config.js';
 
 // 도움말: 새 화면이 아니라 홈 위에 작은 창으로 뜬다
 function openHelp() {
@@ -23,11 +23,11 @@ function openHelp() {
 
 // 건물 입면(단면) 일러스트. 층을 누르면 평면도로 이동.
 export function home() {
-  const X = 48, W = 264, FH = 62, TOP = 62, GROUND = TOP + FH * 5;
+  const X = 34, W = 264, FH = 62, TOP = 62, GROUND = TOP + FH * 5;
   const floors = FLOORS.map((f, i) => {
     const y = TOP + FH * i, b1 = f.id === 'B1', scanned = !!SCANNED[f.id];
     const isMain = f.id === '1F'; // 1층은 가운데(오른쪽에서 세 번째) 창을 빼고 그 자리에 출입문을 둔다
-    const wins = [0, 1, 2, 3, 4].filter(k => !(isMain && k === 2)).map(k => h('rect', { class: 'win', x: X + 74 + k * 36, y: y + 16, width: 24, height: 22, rx: 2 }));
+    const wins = [0, 1, 2, 3].filter(k => !(isMain && k === 2)).map(k => h('rect', { class: 'win', x: X + 74 + k * 36, y: y + 16, width: 24, height: 22, rx: 2 }));
     const dx = X + 144, dw = 28, dy = y + 20;
     const door = isMain ? h('g', {},
       h('rect', { x: dx - 6, y: y + 12, width: dw + 12, height: 6, rx: 2, fill: '#2b2f3a' }),            // 문 위 차양
@@ -44,11 +44,26 @@ export function home() {
       h('text', { class: `tag ${scanned ? '' : 'off'}`, x: X + 14, y: y + 44 }, scanned ? '● 3D 스캔' : '준비 중'),
     );
   });
+  // 층 사이 계단: 맨 오른쪽 창 자리에 놓고, 오른쪽에 이름을 적는다
+  const sx = X + W - 52, sw = 34, sh = 56;
+  const stairs = STAIR_PAIRS.map(([lo, hi], i) => {
+    const yb = TOP + FH * (i + 1), y0 = yb - sh / 2, id = `${lo}-${hi}`, on = STAIR_SCANNED.includes(id), n = 5, dir = i % 2 ? -1 : 1; // 층마다 오르는 방향을 번갈아
+    let d = dir > 0 ? `M ${sx} ${y0 + sh}` : `M ${sx + sw} ${y0 + sh}`;
+    for (let k = 0; k < n; k++) d += ` v ${-sh / n} h ${dir * sw / n}`;
+    d += dir > 0 ? ` V ${y0 + sh} Z` : ` V ${y0 + sh} Z`;
+    return h('g', { class: `stair ${on ? 'scanned' : ''}`, role: 'button', tabindex: 0, 'aria-label': `${stairName([lo, hi])} 보기`,
+      onClick: () => (location.hash = `#/stairs/${id}`), onKeydown: e => e.key === 'Enter' && (location.hash = `#/stairs/${id}`) },
+      h('rect', { class: 'shaft', x: sx - 4, y: y0 - 2, width: sw + 8, height: sh + 4, rx: 3 }),
+      h('path', { class: 'steps', d }),
+      h('text', { class: `stl ${on ? '' : 'off'}`, x: X + W + 7, y: yb === GROUND ? yb + 19 : yb - 1 }, stairName([lo, hi]).replace(' 계단', '')),
+      h('text', { class: `stl s ${on ? '' : 'off'}`, x: X + W + 7, y: yb === GROUND ? yb + 30 : yb + 10 }, '계단'));
+  });
   const svg = h('svg', { class: 'elev', viewBox: `0 0 360 ${GROUND + FH + 12}`, role: 'group', 'aria-label': '생활과학대학 입면도' },
     h('rect', { x: 0, y: GROUND, width: 360, height: FH + 12, fill: '#d9d1bd' }),         // 땅속
     h('rect', { x: 0, y: GROUND - 6, width: 360, height: 6, fill: '#8fb08a' }),          // 지면
     h('rect', { x: X - 8, y: TOP - 14, width: W + 16, height: 14, fill: '#2b2f3a', rx: 3 }), // 옥상 난간
     ...floors,
+    ...stairs,
     h('line', { x1: 0, x2: 360, y1: GROUND, y2: GROUND, stroke: '#2b2f3a', 'stroke-width': 2.5 }),
   );
   return h('div', { class: 'home' },

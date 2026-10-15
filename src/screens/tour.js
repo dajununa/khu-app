@@ -78,8 +78,8 @@ export async function openTour(host, opts, cb) {
     console.warn('[tour] 이동 지점을 찾을 수 없습니다:', opts.scene, opts.waypointId);
     toast('위치를 찾을 수 없어요'); host.hidden = true; nav.tour = null; cb.onClose(); return () => {};
   }
-  const floorName = FLOORS.find(f => f.id === cur.floor)?.name || '';
-  const labelFor = w => opts.scene === 'classroom513' ? `${floorName} · 513호` : `${floorName} · 지점 ${wps.filter(x => x.floor === w.floor).indexOf(w) + 1}`;
+  const floorNameOf = w => FLOORS.find(f => f.id === w.floor)?.name || '';
+  const labelFor = w => w.label ? w.label : opts.scene === 'classroom513' ? `${floorNameOf(w)} · 513호` : `${floorNameOf(w)} · 지점 ${wps.filter(x => x.floor === w.floor).indexOf(w) + 1}`;
 
   // --- UI ---
   const loader = h('div', { id: 'loader' }, h('div', {}, h('div', { class: 'spin' }), h('div', {}, '3D 스캔 불러오는 중…'), h('small', { style: 'opacity:.7' }, '처음에는 몇 초 걸려요')));
