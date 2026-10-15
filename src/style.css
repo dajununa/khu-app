@@ -202,13 +202,13 @@ textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
 .home .elev { flex: 1 1 0; min-height: 0; width: 100%; height: auto; }
 .home .legend { flex: none; margin: 4px 0 8px; font-size: 11.5px; }
 
-/* 홈: 층 사이 계단 (단순한 뱃지) */
+/* 홈: 층 사이 계단 (건물 창문과 같은 모양의 계단창) */
 .elev .stair { cursor: pointer; }
 .elev .stair .hit { fill: transparent; }
-.elev .stair .badge { fill: #fff; stroke: #2b2f3a; stroke-width: 1.8; }
-.elev .stair.scanned .badge { fill: #f3d7e0; }
-.elev .stair .ico { fill: none; stroke: #2b2f3a; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-.elev .stair:active .badge, .elev .stair:hover .badge { fill: #e7b9c5; }
+.elev .stair .swin { fill: #bcd2dc; stroke: #2b2f3a; stroke-width: 1.5; }
+.elev .stair.scanned .swin { fill: #e9bccb; }
+.elev .stair .ico { fill: none; stroke: #2b2f3a; stroke-width: 1.5; stroke-linejoin: round; opacity: .75; }
+.elev .stair:active .swin, .elev .stair:hover .swin { fill: #d9a3b6; }
 .elev .stl { font: 700 10px -apple-system, sans-serif; fill: #8a1f3d; }
 .elev .stl.off { fill: #6b6f7b; }
 

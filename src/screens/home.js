@@ -44,16 +44,18 @@ export function home() {
       h('text', { class: `tag ${scanned ? '' : 'off'}`, x: X + 14, y: y + 44 }, scanned ? '● 3D 스캔' : '준비 중'),
     );
   });
-  // 층 사이 계단: 층 경계선 위에 작은 뱃지 하나(계단 모양 선 3칸) + 오른쪽에 이름
-  const bx = X + W - 15, bw = 30, bh = 20; // 뱃지는 건물 오른쪽 벽에 걸친다
+  // 층 사이 계단: 건물 오른쪽에 창문과 같은 모양의 '계단창'을 층 경계에 세로로 걸쳐 놓고, 안에 계단 선을 그린다
+  const sx = X + W - 46, sw = 26, sh = 58;
   const stairs = STAIR_PAIRS.map(([lo, hi], i) => {
-    const yb = TOP + FH * (i + 1), id = `${lo}-${hi}`, on = STAIR_SCANNED.includes(id), ty = yb === GROUND ? yb + 14 : yb; // 지면선과 겹치지 않게
+    const yb = TOP + FH * (i + 1), y0 = yb - sh / 2, id = `${lo}-${hi}`, on = STAIR_SCANNED.includes(id), n = 4, ly = yb === GROUND ? yb + 14 : yb + 3;
+    let d = `M ${sx + 4} ${y0 + sh - 6}`;                                        // 아래 왼쪽에서 위 오른쪽으로 오르는 계단 선
+    for (let k = 0; k < n; k++) d += ` h ${(sw - 8) / n} v ${-(sh - 12) / n}`;
     return h('g', { class: `stair ${on ? 'scanned' : ''}`, role: 'button', tabindex: 0, 'aria-label': `${stairName([lo, hi])} 보기`,
       onClick: () => (location.hash = `#/stairs/${id}`), onKeydown: e => e.key === 'Enter' && (location.hash = `#/stairs/${id}`) },
-      h('rect', { class: 'hit', x: bx - 6, y: yb - 16, width: bw + 70, height: 32 }),
-      h('rect', { class: 'badge', x: bx, y: yb - bh / 2, width: bw, height: bh, rx: bh / 2 }),
-      h('path', { class: 'ico', d: `M ${bx + 8} ${yb + 5} h 4 v -4 h 4 v -4 h 4 v -4` }),
-      h('text', { class: `stl ${on ? '' : 'off'}`, x: bx + bw + 5, y: ty + 4 }, stairName([lo, hi])));
+      h('rect', { class: 'hit', x: sx - 4, y: y0 - 2, width: sw + 80, height: sh + 4 }),
+      h('rect', { class: 'swin', x: sx, y: y0, width: sw, height: sh, rx: 2 }),
+      h('path', { class: 'ico', d }),
+      h('text', { class: `stl ${on ? '' : 'off'}`, x: X + W + 7, y: ly }, stairName([lo, hi])));
   });
   const svg = h('svg', { class: 'elev', viewBox: `0 0 360 ${GROUND + FH + 12}`, role: 'group', 'aria-label': '생활과학대학 입면도' },
     h('rect', { x: 0, y: GROUND, width: 360, height: FH + 12, fill: '#d9d1bd' }),         // 땅속
