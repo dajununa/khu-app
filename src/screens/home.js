@@ -44,8 +44,8 @@ export function home() {
       h('text', { class: `tag ${scanned ? '' : 'off'}`, x: X + 14, y: y + 44 }, scanned ? '● 3D 스캔' : '준비 중'),
     );
   });
-  // 층 사이 계단: 맨 오른쪽 창 자리에 놓은 계단 상자(유리색)와 안의 계단 칸(벽 색). 오르는 방향은 층마다 번갈아.
-  const sx = X + W - 52, sw = 34, sh = 56;
+  // 층 사이 계단: 건물 오른쪽 끝(벽)에 붙여서, 테두리 없이 계단 모양만 색으로 칠한다. 계단 모양만 눌린다.
+  const sw = 34, sh = 56, sx = X + W - sw - 2;
   const stairs = STAIR_PAIRS.map(([lo, hi], i) => {
     const yb = TOP + FH * (i + 1), y0 = yb - sh / 2, id = `${lo}-${hi}`, on = STAIR_SCANNED.includes(id), n = 5, dir = i % 2 ? -1 : 1;
     let d = dir > 0 ? `M ${sx} ${y0 + sh}` : `M ${sx + sw} ${y0 + sh}`;
@@ -54,7 +54,6 @@ export function home() {
     const ly = yb === GROUND ? yb + 19 : yb - 1;
     return h('g', { class: `stair ${on ? 'scanned' : ''}`, role: 'button', tabindex: 0, 'aria-label': `${stairName([lo, hi])} 보기`,
       onClick: () => (location.hash = `#/stairs/${id}`), onKeydown: e => e.key === 'Enter' && (location.hash = `#/stairs/${id}`) },
-      h('rect', { class: 'shaft', x: sx - 4, y: y0 - 2, width: sw + 8, height: sh + 4, rx: 2 }),
       h('path', { class: 'steps', d }),
       h('text', { class: `stl ${on ? '' : 'off'}`, x: X + W + 7, y: ly }, stairName([lo, hi]).replace(' 계단', '')),
       h('text', { class: `stl s ${on ? '' : 'off'}`, x: X + W + 7, y: ly + 11 }, '계단'));

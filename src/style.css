@@ -202,11 +202,11 @@ textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
 .home .elev { flex: 1 1 0; min-height: 0; width: 100%; height: auto; }
 .home .legend { flex: none; margin: 4px 0 8px; font-size: 11.5px; }
 
-/* 홈: 층 사이 계단 — 건물과 같은 색(창문 유리색 + 벽 색) */
-.elev .stair { cursor: pointer; }
-.elev .stair .shaft { fill: #bcd2dc; stroke: #2b2f3a; stroke-width: 2; }
-.elev .stair .steps { fill: #f6f1e4; stroke: #2b2f3a; stroke-width: 1.8; stroke-linejoin: round; }
-.elev .stair:active .shaft, .elev .stair:hover .shaft { fill: #a3bfcb; }
+/* 홈: 층 사이 계단 — 테두리 없이 계단 모양만 (눌리는 곳도 계단 모양만) */
+.elev .stair { pointer-events: none; }
+.elev .stair .steps { fill: #a9c4d0; stroke: none; pointer-events: all; cursor: pointer; }
+.elev .stair .stl { pointer-events: none; }
+.elev .stair .steps:active, .elev .stair .steps:hover { fill: #8fb0c0; }
 .elev .stl { font: 700 11px -apple-system, sans-serif; fill: #8a1f3d; }
 .elev .stl.s { font-size: 9.5px; }
 .elev .stl.off { fill: #6b6f7b; }
