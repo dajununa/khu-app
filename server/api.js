@@ -82,6 +82,13 @@ export function reportsApi() {
         if (!STATUSES.includes(b.status)) return send(res, 400, { error: '상태가 올바르지 않습니다.' });
         r.status = b.status; save(rows); return send(res, 200, r);
       }
+      if (req.method === 'DELETE' && id) {
+        if (req.headers['x-admin-pin'] !== ADMIN_PIN) return send(res, 403, { error: 'PIN이 올바르지 않습니다.' });
+        const r = rows.find(x => x.id === id);
+        if (!r) return send(res, 404, { error: 'not found' });
+        for (const u of [r.photo, r.shot]) if (u) fs.rmSync(path.join(UPLOADS, path.basename(u)), { force: true });
+        save(rows.filter(x => x.id !== id)); return send(res, 200, {});
+      }
       return send(res, 405, { error: 'method not allowed' });
     } catch (e) { return send(res, 400, { error: String(e.message || e) }); }
   };

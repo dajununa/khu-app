@@ -13,6 +13,7 @@ const local = {
   list: () => fetch('/api/reports').then(j),
   create: (body) => fetch('/api/reports', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).then(j),
   setStatus: (id, status, pin) => fetch('/api/reports/' + id, { method: 'PATCH', headers: { 'Content-Type': 'application/json', 'x-admin-pin': pin }, body: JSON.stringify({ status }) }).then(j),
+  remove: (id, pin) => fetch('/api/reports/' + id, { method: 'DELETE', headers: { 'x-admin-pin': pin } }).then(j),
 };
 
 // ---- Supabase ----
@@ -38,6 +39,11 @@ const remote = {
   async setStatus(id, status, pin) {
     await fetch(`${SB}/rest/v1/rpc/set_status`, { method: 'POST', headers: H({ 'Content-Type': 'application/json' }), body: JSON.stringify({ rid: id, new_status: status, pin_in: pin }) }).then(async r => { if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error(/PIN/.test(e.message || '') ? 'PIN이 올바르지 않습니다.' : '변경에 실패했습니다.'); } });
     return { status };
+  },
+  async remove(id, pin) {
+    const r = await fetch(`${SB}/rest/v1/rpc/delete_report`, { method: 'POST', headers: H({ 'Content-Type': 'application/json' }), body: JSON.stringify({ rid: id, pin_in: pin }) });
+    if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error(/PIN/.test(e.message || '') ? 'PIN이 올바르지 않습니다.' : '삭제에 실패했습니다.'); }
+    return {};
   },
 };
 

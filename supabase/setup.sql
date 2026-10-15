@@ -41,3 +41,14 @@ values ('reports', 'reports', true, 4194304, array['image/jpeg'])
 on conflict (id) do nothing;
 drop policy if exists "reports_upload" on storage.objects;
 create policy "reports_upload" on storage.objects for insert to anon with check (bucket_id = 'reports');
+
+-- 글 삭제 (관리자 PIN 필요). 나중에 추가된 부분이라 이 부분만 따로 실행해도 됩니다.
+create or replace function public.delete_report(rid uuid, pin_in text)
+returns void language plpgsql security definer set search_path = public as $$
+begin
+  if pin_in is distinct from (select pin from public.admin_secret limit 1) then
+    raise exception 'PIN이 올바르지 않습니다.';
+  end if;
+  delete from public.reports where id = rid;
+end $$;
+grant execute on function public.delete_report(uuid, text) to anon;
