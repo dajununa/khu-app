@@ -1,7 +1,17 @@
 import { h, toast, shrinkImage } from '../lib/dom.js';
 import { api } from '../lib/api.js';
-import { draft, resetDraft, nav } from '../lib/state.js';
+import { draft, resetDraft, nav, getWaypoints } from '../lib/state.js';
 import { CATEGORIES } from '../data/config.js';
+
+const NEAR_M = 1;
+const likedSet = () => { try { return JSON.parse(localStorage.getItem('khu_liked') || '[]'); } catch { return []; } };
+const setLiked = (id, on) => { try { localStorage.setItem('khu_liked', JSON.stringify(on ? [...new Set([...likedSet(), id])] : likedSet().filter(x => x !== id))); } catch {} };
+// 핀한 지점: 지점(waypoint)에서 시선 방향으로 3m (3D 화면의 핀 표시와 같은 계산)
+const pinPoint = (pin, wps) => {
+  const w = wps?.[pin?.scene]?.find(x => x.id === pin.waypoint); if (!w) return null;
+  const r = Math.PI / 180, y = pin.yaw * r, p = pin.pitch * r;
+  return [w.pos[0] - Math.sin(y) * Math.cos(p) * 3, w.pos[1] + Math.cos(y) * Math.cos(p) * 3, w.pos[2] + Math.sin(p) * 3];
+};
 
 export function report() {
   if (!draft.pin) { location.hash = '#/'; return h('div'); }
@@ -31,6 +41,33 @@ export function report() {
   input.addEventListener('change', async () => { const f = input.files[0]; if (!f) return; try { draft.photo = await shrinkImage(f); renderPhoto(); } catch (e) { toast(e.message); } });
   renderPhoto();
 
+  // 핀 주변 1m 안에 이미 신고된 하자가 있으면 사진과 함께 보여 준다
+  const nearBox = h('div', { class: 'near', hidden: true });
+  if (draft.kind === '하자') {
+    Promise.all([api.list(), getWaypoints()]).then(([rows, wps]) => {
+      const me = pinPoint(draft.pin, wps); if (!me) return;
+      const near = rows.filter(r => r.kind === '하자' && r.status !== '완료' && r.pin?.scene === draft.pin.scene).map(r => ({ r, d: (p => p && Math.hypot(p[0] - me[0], p[1] - me[1], p[2] - me[2]))(pinPoint(r.pin, wps)) }))
+        .filter(x => x.d != null && x.d <= NEAR_M).sort((a, b) => a.d - b.d);
+      if (!near.length) return;
+      nearBox.replaceChildren(h('b', { class: 'nt' }, '근처에 이미 신고된 문제가 있어요'), h('small', {}, '같은 문제라면 새로 신고하지 말고 공감해 주세요.'),
+        ...near.map(({ r, d }) => {
+          const img = r.photo || r.shot, on = () => likedSet().includes(r.id);
+          const like = h('button', { class: 'btn ghost', type: 'button' });
+          const paint = () => { like.textContent = on() ? `♥ 공감함 · ${r.likes || 0}` : `같은 문제예요, 공감하기 · ${r.likes || 0}`; };
+          like.addEventListener('click', async () => {
+            const nowOn = !on(), dl = nowOn ? 1 : -1; setLiked(r.id, nowOn); r.likes = Math.max(0, (r.likes || 0) + dl); paint();
+            try { r.likes = (await api.like(r.id, dl)).likes; } catch { setLiked(r.id, !nowOn); r.likes = Math.max(0, r.likes - dl); toast('공감에 실패했어요.'); }
+            paint();
+          });
+          paint();
+          return h('div', { class: 'nitem' },
+            img ? h('img', { src: img, alt: '이미 신고된 사진', loading: 'lazy' }) : null,
+            h('div', {}, `${r.category || '하자'} · ${d.toFixed(1)}m 거리 · ${r.status} · 공감 ${r.likes || 0}`), r.detail ? h('div', { class: 'nd' }, r.detail) : null, like);
+        }));
+      nearBox.hidden = false;
+    }).catch(() => {});
+  }
+
   const submit = h('button', { class: 'btn block', type: 'button' }, '신고 접수');
   submit.addEventListener('click', async () => {
     const detail = ta.value.trim();
@@ -47,6 +84,7 @@ export function report() {
     h('div', { class: 'card' }, h('span', { class: 'lbl' }, '핀한 위치'),
       h('div', { class: 'loc' }, draft.shot ? h('img', { src: draft.shot, alt: '핀한 3D 화면' }) : null,
         h('div', {}, h('b', {}, draft.label), h('small', {}, '3D 스캔에서 핀한 곳'), h('br'), h('button', { class: 'linkbtn', type: 'button', onClick: () => history.back() }, '위치 다시 정하기')))),
+    nearBox,
     lfWrap,
     h('div', {}, catLbl, catsEl),
     h('div', {}, h('span', { class: 'lbl' }, '직접 찍은 사진 (선택)'), photoBox),

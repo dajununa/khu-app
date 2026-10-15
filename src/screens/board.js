@@ -1,6 +1,6 @@
 import { h, toast, ago, fullTime, shrinkImage } from '../lib/dom.js';
 import { api } from '../lib/api.js';
-import { STATUSES } from '../data/config.js';
+import { STATUSES, CATEGORIES } from '../data/config.js';
 import { goTour, nav } from '../lib/state.js';
 
 const sIdx = s => STATUSES.indexOf(s);
@@ -11,26 +11,48 @@ const setLiked = (id, on) => { try { localStorage.setItem('khu_liked', JSON.stri
 // 십자선이 사진에 구워지기 전(배포 전, 2026-10-15 16:50 KST 이전)에 올라온 3D 화면은 중앙에 십자선을 덧그린다
 const needsCross = r => r.shot && new Date(r.createdAt) < new Date('2026-10-15T07:50:00Z');
 const crossSvg = () => h('svg', { class: 'xhair', viewBox: '-50 -50 100 100' }, ...[['#fff', 15], ['#e0344f', 8]].map(([c, w]) => h('path', { d: 'M-17 0a6 6 0 1 0 12 0a6 6 0 1 0-12 0M-14 0H-8M8 0H14M0-14V-8M0 8V14', fill: 'none', stroke: c, 'stroke-width': w, 'stroke-linecap': 'round' })), h('circle', { r: 4, fill: '#e0344f' }));
-const shotView = (r, src, cls, alt) => { const im = h('img', { class: cls, src, alt, loading: 'lazy' }); return needsCross(r) && src === r.shot ? h('div', { class: `xwrap ${cls}` }, im, crossSvg()) : im; };
+// 사진 가운데에 빨간 십자선이 이미 구워져 있는지 픽셀로 확인 (확인 못 하면 업로드 시각으로 추정)
+const hasBaked = im => { try {
+  const w = im.naturalWidth, hh = im.naturalHeight, c = document.createElement('canvas'), n = 40;
+  c.width = c.height = n; const g = c.getContext('2d');
+  g.drawImage(im, w / 2 - w * 0.07, hh / 2 - w * 0.07, w * 0.14, w * 0.14, 0, 0, n, n);
+  const d = g.getImageData(0, 0, n, n).data; let k = 0;
+  for (let i = 0; i < d.length; i += 4) if (d[i] > 190 && d[i + 1] < 90 && d[i + 2] < 120) k++;
+  return k > 12;
+} catch { return null; } };
+const shotView = (r, src, cls, alt) => {
+  const im = h('img', { class: cls, src, alt, loading: 'lazy', crossorigin: 'anonymous' });
+  if (src !== r.shot) return im;
+  const wrap = h('div', { class: `xwrap ${cls}` }, im);
+  im.addEventListener('load', () => { const b = hasBaked(im); if (b === false || (b === null && needsCross(r))) wrap.append(crossSvg()); });
+  return wrap;
+};
 const badge = s => h('span', { class: `badge s-${sIdx(s)}` }, s);
 
 export function board() {
-  let rows = [], kind = '전체', status = '전체', timer;
+  let rows = [], kind = '전체', status = '전체', cat = '전체', timer;
   const root = h('div', {});
   const list = h('div', { class: 'list' });
   const chips = h('div', { class: 'chips', role: 'tablist' });
   const kindSeg = h('div', { class: 'chips' });
+  const catChips = h('div', { class: 'chips', 'aria-label': '항목' });
+  const catNames = () => [...new Set((kind === '전체' ? Object.values(CATEGORIES).flat() : CATEGORIES[kind]).map(c => c[0]))];
+  const match = r => (kind === '전체' || r.kind === kind) && (status === '전체' || r.status === status) && (cat === '전체' || r.category === cat);
 
   function drawChips() {
-    kindSeg.replaceChildren(...['전체', '하자', '분실물'].map(k => h('button', { class: `chip ${kind === k ? 'on' : ''}`, onClick: () => { kind = k; draw(); } }, k)));
+    kindSeg.replaceChildren(...['전체', '하자', '분실물'].map(k => h('button', { class: `chip ${kind === k ? 'on' : ''}`, onClick: () => { kind = k; cat = '전체'; draw(); } }, k)));
+    catChips.replaceChildren(...['전체', ...catNames()].map(c => {
+      const n = rows.filter(r => (kind === '전체' || r.kind === kind) && (status === '전체' || r.status === status) && (c === '전체' || r.category === c)).length;
+      return h('button', { class: `chip ${cat === c ? 'on' : ''}`, onClick: () => { cat = c; draw(); } }, `${c} ${n}`);
+    }));
     chips.replaceChildren(...['전체', ...STATUSES].map(s => {
-      const n = rows.filter(r => (kind === '전체' || r.kind === kind) && (s === '전체' || r.status === s)).length;
+      const n = rows.filter(r => (kind === '전체' || r.kind === kind) && (cat === '전체' || r.category === cat) && (s === '전체' || r.status === s)).length;
       return h('button', { class: `chip ${status === s ? 'on' : ''}`, onClick: () => { status = s; draw(); } }, `${s} ${n}`);
     }));
   }
   function draw() {
     drawChips();
-    const shown = rows.filter(r => (kind === '전체' || r.kind === kind) && (status === '전체' || r.status === status));
+    const shown = rows.filter(match);
     list.replaceChildren(...(shown.length ? shown.map(card) : [h('div', { class: 'empty' }, h('b', {}, '접수된 내용이 없어요'), '홈에서 층을 골라 첫 신고를 남겨 보세요.')]));
   }
   function card(r) {
@@ -85,7 +107,7 @@ export function board() {
   async function refresh() {
     try { rows = await api.list(); draw(); } catch { if (!rows.length) list.replaceChildren(h('div', { class: 'empty' }, h('b', {}, '불러오지 못했어요'), '서버가 켜져 있는지 확인해 주세요.')); }
   }
-  root.append(h('div', { class: 'topbar head2' }, h('div', {}, h('h1', {}, '접수현황'), h('p', { class: 'sub' }, '지금까지 접수된 하자·분실물 신고예요. 누구나 볼 수 있어요.'))), kindSeg, chips, list);
+  root.append(h('div', { class: 'topbar head2' }, h('div', {}, h('h1', {}, '접수현황'), h('p', { class: 'sub' }, '지금까지 접수된 하자·분실물 신고예요. 누구나 볼 수 있어요.'))), kindSeg, catChips, chips, list);
   list.replaceChildren(h('div', { class: 'empty' }, '불러오는 중…'));
   refresh().then(() => { nav.justAdded = null; });
   timer = setInterval(refresh, 15000);
