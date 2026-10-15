@@ -1,9 +1,12 @@
+import { SAMPLE } from '../data/sample.js';
 // 강의실·시간표·편의시설·대여 데이터와 관리자 로그인.
 // VITE_SUPABASE_URL 이 있으면 Supabase, 없으면 로컬 개발 서버(server/db.js)를 쓴다. (신고는 api.js 가 따로 담당)
 const SB = import.meta.env.VITE_SUPABASE_URL?.replace(/\/$/, '');
 const KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 const REMOTE = !!(SB && KEY);
 const SKEY = 'khu_admin';
+const sampled = new Set(); // 예시 데이터로 대신 보여 준 테이블
+export const isSample = () => sampled.size > 0;
 
 async function j(res) {
   const data = await res.json().catch(() => ({}));
@@ -64,7 +67,15 @@ const ORDER = { rooms: 'floor,code', schedules: 'weekday,start_time', schedule_e
 export const db = {
   async list(t, { auth = false } = {}) {
     const q = REMOTE ? `?select=*${ORDER[t] ? '&order=' + ORDER[t] : ''}&limit=5000` : '';
-    return fetch(base(t) + q, { headers: await headers(auth) }).then(j);
+    try {
+      const rows = await fetch(base(t) + q, { headers: await headers(auth) }).then(j);
+      if (SAMPLE[t]) sampled.delete(t);
+      return rows;
+    } catch (e) {
+      // 테이블이 아직 없으면(features.sql 실행 전) 학생 화면은 예시 데이터로 보여 준다. 관리자 화면(auth)은 그대로 오류.
+      if (!auth && SAMPLE[t]) { sampled.add(t); return SAMPLE[t]; }
+      throw e;
+    }
   },
   async insert(t, rows, { auth = true } = {}) {
     // 학생 대여 신청은 결과를 읽을 권한이 없으므로 return=minimal

@@ -1,5 +1,6 @@
 import { h } from './dom.js';
 import { FLOORS } from '../data/config.js';
+import { isSample } from './db.js';
 
 const chevron = d => h('svg', { viewBox: '0 0 24 24' }, h('path', { d }));
 export const backLink = (href, label = '뒤로') => h('a', { class: 'iconbtn', href, 'aria-label': label }, chevron('M15 5l-7 7 7 7'));
@@ -36,3 +37,5 @@ export function fill(el, ...kids) {
   el.replaceChildren(...kids.flat(3).filter(k => k != null && k !== false));
   return el;
 }
+// 예시 데이터로 보여 줄 때 맨 위에 붙는 안내
+export const sampleNote = (text = '예시 데이터로 보여 주는 화면이에요. 실제 정보는 행정실에서 등록하면 바뀌어요.') => (isSample() ? h('div', { class: 'sample-note' }, text) : null);
