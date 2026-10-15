@@ -23,7 +23,7 @@ function openHelp() {
 
 // 건물 입면(단면) 일러스트. 층을 누르면 평면도로 이동.
 export function home() {
-  const X = 34, W = 264, FH = 62, TOP = 62, GROUND = TOP + FH * 5;
+  const X = 22, W = 264, FH = 62, TOP = 62, GROUND = TOP + FH * 5;
   const floors = FLOORS.map((f, i) => {
     const y = TOP + FH * i, b1 = f.id === 'B1', scanned = !!SCANNED[f.id];
     const isMain = f.id === '1F'; // 1층은 가운데(오른쪽에서 세 번째) 창을 빼고 그 자리에 출입문을 둔다
@@ -44,19 +44,16 @@ export function home() {
       h('text', { class: `tag ${scanned ? '' : 'off'}`, x: X + 14, y: y + 44 }, scanned ? '● 3D 스캔' : '준비 중'),
     );
   });
-  // 층 사이 계단: 맨 오른쪽 창 자리에 놓고, 오른쪽에 이름을 적는다
-  const sx = X + W - 52, sw = 34, sh = 56;
+  // 층 사이 계단: 층 경계선 위에 작은 뱃지 하나(계단 모양 선 3칸) + 오른쪽에 이름
+  const bx = X + W - 15, bw = 30, bh = 20; // 뱃지는 건물 오른쪽 벽에 걸친다
   const stairs = STAIR_PAIRS.map(([lo, hi], i) => {
-    const yb = TOP + FH * (i + 1), y0 = yb - sh / 2, id = `${lo}-${hi}`, on = STAIR_SCANNED.includes(id), n = 5, dir = i % 2 ? -1 : 1; // 층마다 오르는 방향을 번갈아
-    let d = dir > 0 ? `M ${sx} ${y0 + sh}` : `M ${sx + sw} ${y0 + sh}`;
-    for (let k = 0; k < n; k++) d += ` v ${-sh / n} h ${dir * sw / n}`;
-    d += dir > 0 ? ` V ${y0 + sh} Z` : ` V ${y0 + sh} Z`;
+    const yb = TOP + FH * (i + 1), id = `${lo}-${hi}`, on = STAIR_SCANNED.includes(id), ty = yb === GROUND ? yb + 14 : yb; // 지면선과 겹치지 않게
     return h('g', { class: `stair ${on ? 'scanned' : ''}`, role: 'button', tabindex: 0, 'aria-label': `${stairName([lo, hi])} 보기`,
       onClick: () => (location.hash = `#/stairs/${id}`), onKeydown: e => e.key === 'Enter' && (location.hash = `#/stairs/${id}`) },
-      h('rect', { class: 'shaft', x: sx - 4, y: y0 - 2, width: sw + 8, height: sh + 4, rx: 3 }),
-      h('path', { class: 'steps', d }),
-      h('text', { class: `stl ${on ? '' : 'off'}`, x: X + W + 7, y: yb === GROUND ? yb + 19 : yb - 1 }, stairName([lo, hi]).replace(' 계단', '')),
-      h('text', { class: `stl s ${on ? '' : 'off'}`, x: X + W + 7, y: yb === GROUND ? yb + 30 : yb + 10 }, '계단'));
+      h('rect', { class: 'hit', x: bx - 6, y: yb - 16, width: bw + 70, height: 32 }),
+      h('rect', { class: 'badge', x: bx, y: yb - bh / 2, width: bw, height: bh, rx: bh / 2 }),
+      h('path', { class: 'ico', d: `M ${bx + 8} ${yb + 5} h 4 v -4 h 4 v -4 h 4 v -4` }),
+      h('text', { class: `stl ${on ? '' : 'off'}`, x: bx + bw + 5, y: ty + 4 }, stairName([lo, hi])));
   });
   const svg = h('svg', { class: 'elev', viewBox: `0 0 360 ${GROUND + FH + 12}`, role: 'group', 'aria-label': '생활과학대학 입면도' },
     h('rect', { x: 0, y: GROUND, width: 360, height: FH + 12, fill: '#d9d1bd' }),         // 땅속

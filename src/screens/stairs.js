@@ -36,13 +36,13 @@ export async function stairs(pairId) {
     // 방향 화살표
     h('path', { class: 'arr', d: 'M70 266 V130 M52 148 L70 130 L88 148' }),            // 올라가는 ↑
     h('path', { class: 'arr', d: 'M170 130 V266 M152 248 L170 266 L188 248' }),         // 내려가는 ↓
-    h('text', { x: 120, y: 48 }, '층계참'), h('text', { class: 's', x: 120, y: 64 }, '꺾이는 평평한 곳'),
+    h('text', { x: 120, y: 48 }, '층계참'), 
     h('text', { x: 70, y: 196 }, '올라가는 계단'), h('text', { class: 's', x: 70, y: 214 }, `${floorName(lo)}에서 시작`),
     h('text', { x: 170, y: 196 }, '내려가는 계단'), h('text', { class: 's', x: 170, y: 214 }, `${floorName(hi)}에서 시작`),
   );
 
   root.append(h('p', { class: 'hint' }, scanned ? '신고할 계단 부분을 누르면 3D 스캔으로 이동해요.' : '이 계단은 아직 3D 스캔이 없어요.'),
     h('div', { class: 'plan-wrap', style: 'position:relative' }, svg,
-      scanned ? h('div', { class: 'plan-legend', style: 'top:auto;bottom:10px' }, h('i'), '색칠된 곳은 3D 스캔 구역') : null));
+      scanned ? h('div', { class: 'plan-legend', style: 'position:static;margin:6px auto 2px;width:max-content' }, h('i'), '색칠된 곳은 3D 스캔 구역') : null));
   return root;
 }

@@ -202,15 +202,15 @@ textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
 .home .elev { flex: 1 1 0; min-height: 0; width: 100%; height: auto; }
 .home .legend { flex: none; margin: 4px 0 8px; font-size: 11.5px; }
 
-/* 홈: 층 사이 계단 */
+/* 홈: 층 사이 계단 (단순한 뱃지) */
 .elev .stair { cursor: pointer; }
-.elev .stair .shaft { fill: #e4ded0; stroke: #2b2f3a; stroke-width: 2; }
-.elev .stair.scanned .shaft { fill: #f3e3d4; }
-.elev .stair .steps { fill: #fff; stroke: #2b2f3a; stroke-width: 1.8; stroke-linejoin: round; }
-.elev .stair:active .shaft, .elev .stair:hover .shaft { fill: #e7b9c5; }
-.elev .stl { font: 700 11px -apple-system, sans-serif; fill: #8a1f3d; }
-.elev .stl.s { font-size: 9.5px; }
-.elev .stl.off { fill: #8a8d97; }
+.elev .stair .hit { fill: transparent; }
+.elev .stair .badge { fill: #fff; stroke: #2b2f3a; stroke-width: 1.8; }
+.elev .stair.scanned .badge { fill: #f3d7e0; }
+.elev .stair .ico { fill: none; stroke: #2b2f3a; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.elev .stair:active .badge, .elev .stair:hover .badge { fill: #e7b9c5; }
+.elev .stl { font: 700 10px -apple-system, sans-serif; fill: #8a1f3d; }
+.elev .stl.off { fill: #6b6f7b; }
 
 /* 스캔 구역: 연한 장밋빛 (파란색 아님) */
 :root { --scan: #e0527f; }
@@ -224,13 +224,13 @@ textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
 
 /* 계단 화면 */
 .stairplan { width: 100%; height: auto; max-height: calc(100vh - 220px); display: block; }
-.stairplan .shaft { fill: #fff; stroke: #2b2f3a; stroke-width: 3; }
-.stairplan .flight, .stairplan .landing { fill: #f6f2e8; stroke: #2b2f3a; stroke-width: 2; }
-.stairplan .tread { stroke: #2b2f3a; stroke-width: 1; opacity: .45; }
+.stairplan .shaft { fill: #fff; stroke: none; }
+.stairplan .flight, .stairplan .landing { fill: #faf8f3; stroke: #2b2f3a; stroke-width: 1.5; }
+.stairplan .tread { display: none; }
 .stairplan .zone { fill: var(--scan); fill-opacity: .22; stroke: #c44469; stroke-opacity: .55; stroke-width: 1.5; cursor: pointer; }
 .stairplan .zone.off { fill: #8a8d97; fill-opacity: .14; stroke: #8a8d97; stroke-opacity: .4; cursor: default; }
 .stairplan .zone:hover, .stairplan .zone:active { fill-opacity: .4; }
-.stairplan .well { fill: #e9e4d8; stroke: #2b2f3a; stroke-width: 1.5; }
-.stairplan .arr { fill: none; stroke: #8a1f3d; stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
+.stairplan .well { fill: none; stroke: none; }
+.stairplan .arr { fill: none; stroke: #8a1f3d; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
 .stairplan text { font: 700 13px -apple-system, sans-serif; fill: #2b2f3a; text-anchor: middle; pointer-events: none; paint-order: stroke; stroke: #fff; stroke-width: 3px; }
 .stairplan text.s { font-size: 10.5px; font-weight: 600; fill: #6b6f7b; }
