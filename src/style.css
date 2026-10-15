@@ -261,3 +261,11 @@ textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
 .item .xwrap.th { border-radius: 12px; flex: none; }
 .sheet .ba .xwrap { aspect-ratio: 1; border-radius: 12px; }
 .sheet .ba .xwrap > img { aspect-ratio: auto; }
+
+/* 평면도 하단: 아래 층 / 위 층 이동 */
+.floornav { position: sticky; bottom: 0; z-index: 4; flex: none; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 8px 12px 10px; background: var(--bg); }
+.fbtn { display: flex; align-items: center; gap: 8px; min-height: 46px; padding: 0 16px; border: 1px solid var(--line); background: var(--surface); border-radius: 14px; text-decoration: none; color: var(--ink); font-weight: 700; font-size: 15px; }
+.fbtn.l { justify-content: flex-start; }
+.fbtn.r { justify-content: flex-end; grid-column: 2; }
+.fbtn:active { background: #efe9dc; }
+.fbtn { font-size: 15px; }

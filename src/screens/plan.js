@@ -14,7 +14,22 @@ const EVAC_TAP_MAX_M = 2.2; // 탭 위치에서 이 거리(m) 안에 이동 지�
 
 const backBtn = () => h('a', { class: 'iconbtn', href: '#/building', 'aria-label': '뒤로' }, h('svg', { viewBox: '0 0 24 24' }, h('path', { d: 'M15 5l-7 7 7 7' })));
 
+// 하단 층 이동: 왼쪽 = 아래 층, 오른쪽 = 위 층
+function floorNav(floorId) {
+  const i = FLOORS.findIndex(f => f.id === floorId), up = FLOORS[i - 1], down = FLOORS[i + 1];
+  const btn = (f, left) => f
+    ? h('a', { class: `fbtn ${left ? 'l' : 'r'}`, href: `#/floor/${f.id}`, 'aria-label': `${f.name} 평면도로 이동` }, left ? ['‹', h('span', {}, f.name)] : [h('span', {}, f.name), '›'])
+    : h('span', {});
+  return h('nav', { class: 'floornav', 'aria-label': '층 이동' }, btn(down, true), btn(up, false));
+}
+
 export async function plan(floorId) {
+  const root = await planInner(floorId);
+  if (FLOORS.some(f => f.id === floorId)) root.append(floorNav(floorId));
+  return root;
+}
+
+async function planInner(floorId) {
   const floor = FLOORS.find(f => f.id === floorId);
   const root = h('div', {}, h('div', { class: 'topbar' }, backBtn(), h('h1', {}, floor ? `${floor.name} 평면도` : '평면도')));
   if (!floor) return root.append(h('div', { class: 'empty' }, '없는 층입니다.')), root;
