@@ -2,6 +2,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
+import { dbHandler } from './db.js';
 
 const DATA = path.resolve('data');
 const UPLOADS = path.join(DATA, 'uploads');
@@ -87,7 +88,7 @@ export function reportsApi() {
   };
   return {
     name: 'reports-api',
-    configureServer(s) { s.middlewares.use(handler); },
-    configurePreviewServer(s) { s.middlewares.use(handler); },
+    configureServer(s) { s.middlewares.use(handler); s.middlewares.use(dbHandler); },
+    configurePreviewServer(s) { s.middlewares.use(handler); s.middlewares.use(dbHandler); },
   };
 }
