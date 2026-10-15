@@ -206,31 +206,45 @@ textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
 .elev .stair { cursor: pointer; }
 .elev .stair .hit { fill: transparent; }
 .elev .stair .swin { fill: #bcd2dc; stroke: #2b2f3a; stroke-width: 1.5; }
-.elev .stair.scanned .swin { fill: #e9bccb; }
+
 .elev .stair .ico { fill: none; stroke: #2b2f3a; stroke-width: 1.5; stroke-linejoin: round; opacity: .75; }
-.elev .stair:active .swin, .elev .stair:hover .swin { fill: #d9a3b6; }
+.elev .stair:active .swin, .elev .stair:hover .swin { fill: #9fbac6; }
 .elev .stl { font: 700 10px -apple-system, sans-serif; fill: #8a1f3d; }
 .elev .stl.off { fill: #6b6f7b; }
 
 /* 스캔 구역: 연한 장밋빛 (파란색 아님) */
 :root { --scan: #e0527f; }
-.plan.evac .scan-zone { opacity: .26; pointer-events: none; }
+.plan.evac .scan-zone { display: none; }
 .plan.evac .scan-zone line { stroke: var(--scan); stroke-linecap: round; stroke-width: 4.4; }
 .plan.evac .scan-zone circle { fill: var(--scan); }
-.plan.evac .region { fill: var(--scan); fill-opacity: .24; stroke: #c44469; stroke-opacity: .55; stroke-width: 1; }
-.plan.evac .region-badge rect { fill: #c44469; fill-opacity: .85; }
+.plan.evac .region { fill: none; stroke: #2b2f3a; stroke-opacity: .7; stroke-width: 2; stroke-dasharray: 6 4; }
+.plan.evac .region-badge rect { fill: #2b2f3a; fill-opacity: .85; }
 .plan-legend { position: absolute; left: 10px; top: 8px; display: flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; background: #fffffff0; border: 1px solid var(--line); font-size: 12px; color: #1d1f27; pointer-events: none; }
 .plan-legend i { width: 14px; height: 14px; border-radius: 4px; background: color-mix(in srgb, var(--scan) 30%, #fff); border: 1px solid color-mix(in srgb, var(--scan) 70%, #fff); }
 
-/* 계단 화면 */
-.stairplan { width: 100%; height: auto; max-height: calc(100vh - 220px); display: block; }
-.stairplan .shaft { fill: #fff; stroke: none; }
-.stairplan .flight, .stairplan .landing { fill: #faf8f3; stroke: #2b2f3a; stroke-width: 1.5; }
-.stairplan .tread { display: none; }
-.stairplan .zone { fill: var(--scan); fill-opacity: .22; stroke: #c44469; stroke-opacity: .55; stroke-width: 1.5; cursor: pointer; }
-.stairplan .zone.off { fill: #8a8d97; fill-opacity: .14; stroke: #8a8d97; stroke-opacity: .4; cursor: default; }
-.stairplan .zone:hover, .stairplan .zone:active { fill-opacity: .4; }
-.stairplan .well { fill: none; stroke: none; }
-.stairplan .arr { fill: none; stroke: #8a1f3d; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
-.stairplan text { font: 700 13px -apple-system, sans-serif; fill: #2b2f3a; text-anchor: middle; pointer-events: none; paint-order: stroke; stroke: #fff; stroke-width: 3px; }
-.stairplan text.s { font-size: 10.5px; font-weight: 600; fill: #6b6f7b; }
+/* 계단 화면: 흰 바탕 + 선 한 가지 색 */
+.stairbox { margin: 0 12px 16px; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 14px 12px 16px; }
+.bmap { width: 100%; max-width: 320px; display: block; margin: 0 auto 6px; }
+.bmap .bar { fill: none; stroke: #c9c4b6; stroke-width: 1.5; }
+.bmap .gl rect { fill: #fff; stroke: #b5b1a6; stroke-width: 1.5; }
+.bmap .gl line { stroke: #b5b1a6; stroke-width: 1.2; }
+.bmap .gl.on rect { stroke: #2b2f3a; stroke-width: 2; }
+.bmap .gl.on line { stroke: #2b2f3a; }
+.bmap text { font: 600 10px -apple-system, sans-serif; fill: #8a8d97; text-anchor: middle; }
+.bmap text.on { fill: #2b2f3a; font-weight: 700; }
+.srow { display: grid; grid-template-columns: 38% 1fr; gap: 8px; align-items: center; }
+.flight1 { width: 100%; height: auto; max-height: calc(100vh - 330px); }
+.flight1 .frame { fill: none; stroke: #2b2f3a; stroke-width: 2; }
+.flight1 .bg { fill: transparent; }
+.flight1 .tr { stroke: #2b2f3a; stroke-width: 1; opacity: .5; }
+.flight1 .part.on { cursor: pointer; }
+.flight1 .part.on:hover .bg, .flight1 .part.on:active .bg, .flight1 .part.hl .bg { fill: #efe9dc; }
+.flight1 .ar { fill: none; stroke: #2b2f3a; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; opacity: .8; }
+.plist { display: grid; gap: 10px; }
+.pbtn { display: grid; grid-template-columns: 26px 1fr; grid-template-rows: auto auto; column-gap: 8px; text-align: left; padding: 12px; border: 1px solid var(--line); background: var(--surface); border-radius: 14px; min-height: 64px; }
+.pbtn .pi { grid-row: span 2; align-self: center; font-size: 20px; color: var(--accent); text-align: center; }
+.pbtn .pn { font-weight: 700; font-size: 14.5px; }
+.pbtn .pgo { font-size: 12.5px; color: var(--accent); font-weight: 600; }
+.pbtn:disabled { opacity: .45; }
+.pbtn:disabled .pgo, .pbtn:disabled .pi { color: var(--muted); }
+.pbtn:not(:disabled):active { background: #efe9dc; }

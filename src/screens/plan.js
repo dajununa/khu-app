@@ -10,7 +10,7 @@ const EVAC_PLANS = {
   '4F': { enabled: true, jsons: ['/plans/f4-evac.json'] },
   '5F': { enabled: true, kind: 'regions', jsons: ['/plans/f5-evac.json'] }, // 3D 좌표와 정렬하지 않은 도면: 호실 영역(rooms[].polygon)을 누르면 그 스캔(scene/waypoint)으로. 실패하면 호실 사각형 화면
 };
-const EVAC_TAP_MAX_M = 3; // 탭 위치에서 이 거리(m) 안에 이동 지점이 없으면 '스캔되지 않은 구역'
+const EVAC_TAP_MAX_M = 2.2; // 탭 위치에서 이 거리(m) 안에 이동 지점이 없으면 '스캔되지 않은 구역'
 
 const backBtn = () => h('a', { class: 'iconbtn', href: '#/', 'aria-label': '뒤로' }, h('svg', { viewBox: '0 0 24 24' }, h('path', { d: 'M15 5l-7 7 7 7' })));
 
@@ -92,10 +92,7 @@ async function evacPlan(metaUrl, wps, P, go, lab, name) {
   img.setAttribute('href', '/plans/' + meta.image.file); img.setAttribute('width', iw); img.setAttribute('height', ih);
   img.setAttribute('transform', `matrix(${m.join(' ')})`);
   const upright = (w, text) => { const [x, y] = P(w); return h('text', { class: 'tx s', transform: `translate(${x} ${y}) rotate(${deg}) translate(0 -1.6)` }, text); }; // 회전 보정: 글자는 똑바로
-  const idOf = Object.fromEntries(wps.map(w => [w.id, w])), segs = [];
-  for (const w of wps) for (const l of w.links) if (idOf[l] && w.id < l) segs.push([P(w), P(idOf[l])]); // 이동 가능한 길 = 스캔 구역
-  const zone = h('g', { class: 'scan-zone' }, ...segs.map(([a, b]) => h('line', { x1: a[0], y1: a[1], x2: b[0], y2: b[1] })), ...wps.map(w => h('circle', { cx: P(w)[0], cy: P(w)[1], r: 2.2 })));
-  const world = h('g', {}, img, zone,
+  const world = h('g', {}, img,
     lab.first ? upright(wps[0], lab.first) : null, lab.last ? upright(wps.at(-1), lab.last) : null);
   const g = h('g', { transform: `rotate(${-deg})` }, world);
   const svg = h('svg', { class: 'plan evac', role: 'group', 'aria-label': `${name} 평면도` }, g);
@@ -105,7 +102,7 @@ async function evacPlan(metaUrl, wps, P, go, lab, name) {
     for (const w of wps) { const [x, y] = P(w), d = Math.hypot(x - p.x, y - p.y); if (d < bd) bd = d, best = w; }
     if (best && bd <= EVAC_TAP_MAX_M) go(best.scene, best); else toast('스캔되지 않은 구역입니다');
   } });
-  return h('div', { class: 'plan-wrap evac' }, svg, h('div', { class: 'plan-legend' }, h('i'), '색칠된 곳은 3D 스캔 구역'), h('div', { class: 'plan-hint' }, '도면을 눌러 3D로 이동 · 두 손가락으로 확대'));
+  return h('div', { class: 'plan-wrap evac' }, svg, h('div', { class: 'plan-hint' }, '도면을 눌러 3D로 이동 · 두 손가락으로 확대'));
 }
 
 // 도면 이미지 위에 호실 영역을 얹은 평면도 (3D 좌표 정렬 없음). 도면 px 좌표계의 viewBox 를 쓰고, 영역을 누르면 그 호실의 3D 스캔으로 들어간다.
@@ -126,5 +123,5 @@ async function regionPlan(metaUrl, go, name) {
     const p = new DOMPoint(cx, cy).matrixTransform(svg.getScreenCTM().inverse()), hit = rooms.find(r => inPoly(r.polygon, p.x, p.y));
     if (hit) go(hit.scene, { id: hit.waypoint }); else toast(`스캔이 없는 구역입니다. ${names}만 3D로 볼 수 있어요`);
   } });
-  return h('div', { class: 'plan-wrap evac' }, svg, h('div', { class: 'plan-legend' }, h('i'), '색칠된 곳은 3D 스캔 구역'), h('div', { class: 'plan-hint' }, `${names}를 누르면 3D 스캔으로 이동 · 두 손가락으로 확대`));
+  return h('div', { class: 'plan-wrap evac' }, svg, h('div', { class: 'plan-hint' }, `${names}를 누르면 3D 스캔으로 이동 · 두 손가락으로 확대`));
 }

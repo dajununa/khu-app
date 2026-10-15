@@ -1,48 +1,62 @@
-// 층 사이 계단 평면도: 올라가는 계단 / 층계참 / 내려가는 계단을 눌러 3D 스캔으로 이동.
+// 층 사이 계단 화면 (단순한 선 그림). 중앙 계단은 한 줄 계단 + 가운데 층계참, 양쪽 끝에 다른 계단이 있다.
+// 3D 스캔이 있는 중앙 계단의 각 부분만 누를 수 있다.
 import { h, toast } from '../lib/dom.js';
-import { FLOORS, STAIR_PAIRS, stairName } from '../data/config.js';
+import { STAIR_PAIRS, stairName } from '../data/config.js';
 import { getWaypoints, goTour } from '../lib/state.js';
 
 const backBtn = () => h('a', { class: 'iconbtn', href: '#/', 'aria-label': '뒤로' }, h('svg', { viewBox: '0 0 24 24' }, h('path', { d: 'M15 5l-7 7 7 7' })));
-const floorName = id => FLOORS.find(f => f.id === id)?.name || id;
+const PARTS = [ // 위에서부터
+  { key: 'down', name: '내려가는 계단', icon: '↓', y: 12, h: 76 },
+  { key: 'landing', name: '층계참', icon: '▭', y: 88, h: 64 },
+  { key: 'up', name: '올라가는 계단', icon: '↑', y: 152, h: 76 },
+];
 
 export async function stairs(pairId) {
   const pair = STAIR_PAIRS.find(p => p.join('-') === pairId);
   const root = h('div', {}, h('div', { class: 'topbar' }, backBtn(), h('h1', {}, pair ? stairName(pair) : '계단')));
   if (!pair) return root.append(h('div', { class: 'empty' }, '없는 계단입니다.')), root;
-  const [lo, hi] = pair;
 
   const all = await getWaypoints();
   const mine = (all.building || []).filter(w => w.stair === pairId);
-  const part = name => { const l = mine.filter(w => w.part === name); return l[Math.floor(l.length / 2)] || null; }; // 구간 한가운데 지점
-  const targets = { up: part('up'), landing: part('landing'), down: part('down') };
-  const scanned = mine.length > 0;
-  const go = key => { const wp = targets[key]; if (!wp) return toast('이 구간은 3D 스캔이 없어요'); goTour({ scene: wp.scene, floor: wp.floor, waypointId: wp.id, mode: 'pin' }); };
+  const rep = name => { const l = mine.filter(w => w.part === name); return l[Math.floor(l.length / 2)] || null; }; // 구간 한가운데 지점
+  const has = key => !!rep(key);
+  const go = key => { const wp = rep(key); if (!wp) return toast('이 부분은 3D 스캔이 없어요'); goTour({ scene: wp.scene, floor: wp.floor, waypointId: wp.id, mode: 'pin' }); };
 
-  // U자형 계단을 위에서 본 그림. 왼쪽 = 올라가는 계단, 오른쪽 = 내려가는 계단, 위쪽 = 층계참
-  const treads = (x, y0, y1) => Array.from({ length: Math.round((y1 - y0) / 11) - 1 }, (_, i) => h('line', { class: 'tread', x1: x + 3, x2: x + 85, y1: y0 + 11 * (i + 1), y2: y0 + 11 * (i + 1) }));
-  const zone = (key, el) => { const on = !!targets[key]; el.setAttribute('class', `zone ${on ? '' : 'off'}`); el.setAttribute('role', 'button'); el.setAttribute('tabindex', '0');
-    el.addEventListener('click', () => go(key)); el.addEventListener('keydown', e => e.key === 'Enter' && go(key)); return el; };
-  const svg = h('svg', { class: 'stairplan', viewBox: '0 0 240 320', role: 'group', 'aria-label': `${stairName(pair)} 평면도` },
-    h('rect', { class: 'shaft', x: 14, y: 14, width: 212, height: 292, rx: 4 }),
-    h('rect', { class: 'landing', x: 20, y: 20, width: 200, height: 62 }),
-    h('rect', { class: 'flight', x: 26, y: 82, width: 88, height: 218 }), ...treads(26, 82, 300),
-    h('rect', { class: 'flight', x: 126, y: 82, width: 88, height: 218 }), ...treads(126, 82, 300),
-    h('rect', { class: 'well', x: 114, y: 82, width: 12, height: 218 }),
-    // 눌러지는 구역 (스캔이 있으면 연한 색)
-    zone('landing', h('rect', { x: 20, y: 20, width: 200, height: 62 })),
-    zone('up', h('rect', { x: 26, y: 82, width: 88, height: 218 })),
-    zone('down', h('rect', { x: 126, y: 82, width: 88, height: 218 })),
-    // 방향 화살표
-    h('path', { class: 'arr', d: 'M70 266 V130 M52 148 L70 130 L88 148' }),            // 올라가는 ↑
-    h('path', { class: 'arr', d: 'M170 130 V266 M152 248 L170 266 L188 248' }),         // 내려가는 ↓
-    h('text', { x: 120, y: 48 }, '층계참'), 
-    h('text', { x: 70, y: 196 }, '올라가는 계단'), h('text', { class: 's', x: 70, y: 214 }, `${floorName(lo)}에서 시작`),
-    h('text', { x: 170, y: 196 }, '내려가는 계단'), h('text', { class: 's', x: 170, y: 214 }, `${floorName(hi)}에서 시작`),
-  );
+  // 건물을 위에서 본 개략도: 양쪽 끝 계단(스캔 없음)과 중앙 계단
+  const glyph = (x, on) => h('g', { class: on ? 'gl on' : 'gl' },
+    h('rect', { x: x - 11, y: 14, width: 22, height: 26, rx: 3 }),
+    ...[0, 1, 2, 3].map(i => h('line', { x1: x - 8, x2: x + 8, y1: 20 + i * 5, y2: 20 + i * 5 })));
+  const map = h('svg', { class: 'bmap', viewBox: '0 0 300 66', role: 'img', 'aria-label': '건물 위에서 본 계단 위치: 양쪽 끝과 중앙' },
+    h('rect', { class: 'bar', x: 6, y: 18, width: 288, height: 18, rx: 9 }),
+    glyph(30, false), glyph(150, true), glyph(270, false),
+    h('text', { x: 30, y: 58 }, '끝 계단'), h('text', { class: 'on', x: 150, y: 58 }, '중앙 계단'), h('text', { x: 270, y: 58 }, '끝 계단'));
 
-  root.append(h('p', { class: 'hint' }, scanned ? '신고할 계단 부분을 누르면 3D 스캔으로 이동해요.' : '이 계단은 아직 3D 스캔이 없어요.'),
-    h('div', { class: 'plan-wrap', style: 'position:relative' }, svg,
-      scanned ? h('div', { class: 'plan-legend', style: 'position:static;margin:6px auto 2px;width:max-content' }, h('i'), '색칠된 곳은 3D 스캔 구역') : null));
+  // 중앙 계단 그림 (한 줄)
+  const treads = (y0, y1) => { const out = []; for (let y = y0 + 8; y < y1; y += 8) out.push(h('line', { class: 'tr', x1: 30, x2: 110, y1: y, y2: y })); return out; };
+  const groups = PARTS.map(p => {
+    const on = has(p.key);
+    const g = h('g', { class: `part ${on ? 'on' : ''}`, 'data-key': p.key, role: on ? 'button' : null, tabindex: on ? 0 : null, 'aria-label': on ? `${p.name} 3D 보기` : null },
+      h('rect', { class: 'bg', x: 30, y: p.y, width: 80, height: p.h }),
+      ...(p.key === 'landing' ? [] : treads(p.y, p.y + p.h)));
+    if (on) { g.addEventListener('click', () => go(p.key)); g.addEventListener('keydown', e => e.key === 'Enter' && go(p.key)); }
+    return g;
+  });
+  const flight = h('svg', { class: 'flight1', viewBox: '0 0 140 240', role: 'group', 'aria-label': '중앙 계단' }, ...groups,
+    h('rect', { class: 'frame', x: 30, y: 12, width: 80, height: 216 }),
+    h('line', { class: 'frame', x1: 30, x2: 110, y1: 88, y2: 88 }), h('line', { class: 'frame', x1: 30, x2: 110, y1: 152, y2: 152 }),
+    h('path', { class: 'ar', d: 'M70 36 V64 M62 56 L70 64 L78 56' }), h('path', { class: 'ar', d: 'M70 204 V176 M62 184 L70 176 L78 184' }));
+
+  const list = h('div', { class: 'plist' }, ...PARTS.map(p => {
+    const on = has(p.key);
+    const b = h('button', { type: 'button', class: 'pbtn', disabled: !on, onClick: () => go(p.key) },
+      h('span', { class: 'pi' }, p.icon), h('span', { class: 'pn' }, p.name), h('span', { class: 'pgo' }, on ? '3D로 보기 ›' : '스캔 없음'));
+    b.addEventListener('pointerenter', () => on && groups.find(g => g.dataset.key === p.key).classList.add('hl'));
+    b.addEventListener('pointerleave', () => groups.forEach(g => g.classList.remove('hl')));
+    return b;
+  }));
+
+  root.append(
+    h('p', { class: 'hint' }, mine.length ? '신고할 계단 부분을 눌러 주세요.' : '이 계단은 아직 3D 스캔이 없어요.'),
+    h('div', { class: 'stairbox' }, map, h('div', { class: 'srow' }, flight, list)));
   return root;
 }
