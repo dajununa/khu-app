@@ -10,7 +10,11 @@ const EVAC_PLANS = {
   '4F': { enabled: true, jsons: ['/plans/f4-evac.json'] },
   '5F': { enabled: true, kind: 'regions', jsons: ['/plans/f5-evac.json'] }, // 3D 좌표와 정렬하지 않은 도면: 호실 영역(rooms[].polygon)을 누르면 그 스캔(scene/waypoint)으로. 실패하면 호실 사각형 화면
 };
-const EVAC_TAP_MAX_M = 3; // 탭 위치에서 이 거리(m) 안에 이동 지점이 없으면 '스캔되지 않은 구역'
+// 1F/4F 도면 탭: 탭한 위치에서 가장 가까운 이동 지점의 3D 로 이동한다 (같은 거리면 id 가 작은 쪽).
+const EVAC_TAP_MAX_M = Infinity; // 가장 가까운 지점이 이 거리(m)보다 멀면 이동하지 않고 '스캔되지 않은 구역' 토스트 (Infinity = 제한 없음)
+const EVAC_TAP_NOTICE_M = 3;     // 가장 가까운 지점이 이보다 멀면 이동하면서 '가장 가까운 지점으로 이동' 안내 토스트
+const EVAC_TAP_RIPPLE = true;    // 탭한 자리에 0.5초 안에 사라지는 작은 원 표시
+const EVAC_RIPPLE_MS = 180;      // 원이 보이도록 이동을 조금 늦춘다 (EVAC_TAP_RIPPLE 이 false 면 바로 이동)
 
 const backBtn = () => h('a', { class: 'iconbtn', href: '#/', 'aria-label': '뒤로' }, h('svg', { viewBox: '0 0 24 24' }, h('path', { d: 'M15 5l-7 7 7 7' })));
 
@@ -92,17 +96,48 @@ async function evacPlan(metaUrl, wps, P, go, lab, name) {
   img.setAttribute('href', '/plans/' + meta.image.file); img.setAttribute('width', iw); img.setAttribute('height', ih);
   img.setAttribute('transform', `matrix(${m.join(' ')})`);
   const upright = (w, text) => { const [x, y] = P(w); return h('text', { class: 'tx s', transform: `translate(${x} ${y}) rotate(${deg}) translate(0 -1.6)` }, text); }; // 회전 보정: 글자는 똑바로
-  const world = h('g', {}, img, ...wps.map(w => h('circle', { class: 'pt', cx: P(w)[0], cy: P(w)[1], r: .3 })),
+  const world = h('g', {}, img, // 이동 지점 점은 그리지 않는다 (탭하면 가장 가까운 지점으로 이동)
     lab.first ? upright(wps[0], lab.first) : null, lab.last ? upright(wps.at(-1), lab.last) : null);
   const g = h('g', { transform: `rotate(${-deg})` }, world);
   const svg = h('svg', { class: 'plan evac', role: 'group', 'aria-label': `${name} 평면도` }, g);
+  const det = m[0] * m[3] - m[1] * m[2], inv = [m[3] / det, -m[1] / det, -m[2] / det, m[0] / det, (m[2] * m[5] - m[3] * m[4]) / det, (m[1] * m[4] - m[0] * m[5]) / det]; // m 의 역행렬 (월드 → 도면 px)
+  const outside = await loadOutside('/plans/' + meta.image.file); // 건물 벽 바깥 흰 여백 마스크 (못 만들면 null: 도면 안은 어디든 이동 허용)
+  let busy = false;
   attachPanZoom(svg, full, { onTap: (cx, cy) => {
+    if (busy) return;
     const p = new DOMPoint(cx, cy).matrixTransform(g.getScreenCTM().inverse());
+    const ix = Math.floor(inv[0] * p.x + inv[2] * p.y + inv[4]), iy = Math.floor(inv[1] * p.x + inv[3] * p.y + inv[5]);
+    if (ix < 0 || iy < 0 || ix >= iw || iy >= ih) return; // 도면 이미지 밖
+    if (outside && outside.w === iw && outside.h === ih && outside.m[iy * iw + ix]) return; // 건물 벽 바깥 여백
     let best = null, bd = Infinity;
-    for (const w of wps) { const [x, y] = P(w), d = Math.hypot(x - p.x, y - p.y); if (d < bd) bd = d, best = w; }
-    if (best && bd <= EVAC_TAP_MAX_M) go(best.scene, best); else toast('스캔되지 않은 구역입니다');
+    for (const w of wps) { const [x, y] = P(w), d = Math.hypot(x - p.x, y - p.y); if (d < bd - 1e-9 || (Math.abs(d - bd) <= 1e-9 && w.id < best.id)) bd = d, best = w; }
+    if (!best) return;
+    if (bd > EVAC_TAP_MAX_M) return toast('스캔되지 않은 구역입니다');
+    if (bd > EVAC_TAP_NOTICE_M) toast('스캔이 없는 구역이라 가장 가까운 지점으로 이동했어요');
+    if (EVAC_TAP_RIPPLE) {
+      const c = h('circle', { class: 'tap-ripple', cx: p.x, cy: p.y, r: 1.3 }); g.append(c); setTimeout(() => c.remove(), 500);
+      busy = true; setTimeout(() => { busy = false; go(best.scene, best); }, EVAC_RIPPLE_MS);
+    } else go(best.scene, best);
   } });
   return h('div', { class: 'plan-wrap evac' }, svg, h('div', { class: 'plan-hint' }, '도면을 눌러 3D로 이동 · 두 손가락으로 확대'));
+}
+
+// 도면 이미지에서 건물 벽 바깥의 흰 여백을 찾는다: 이미지 가장자리의 흰 픽셀에서 흰 픽셀만 따라 채운다 (벽선=어두운 선은 1px 두껍게 막고, 회색 복도는 흰색이 아니라 입구가 열려 있어도 새지 않는다).
+// 반환 { w, h, m(1=바깥) } 또는 실패하면 null (그러면 도면 안은 어디를 눌러도 이동).
+async function loadOutside(url) {
+  try {
+    const img = new Image(); img.src = url; await img.decode();
+    const w = img.naturalWidth, h = img.naturalHeight, cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+    const ctx = cv.getContext('2d', { willReadFrequently: true }); ctx.drawImage(img, 0, 0);
+    const d = ctx.getImageData(0, 0, w, h).data, wall = new Uint8Array(w * h), white = new Uint8Array(w * h), m = new Uint8Array(w * h);
+    for (let i = 0; i < w * h; i++) { const r = d[i * 4], g = d[i * 4 + 1], b = d[i * 4 + 2]; if (Math.max(r, g, b) < 150) wall[i] = 1; if (Math.min(r, g, b) >= 236) white[i] = 1; }
+    const thick = new Uint8Array(wall);
+    for (let y = 1; y < h - 1; y++) for (let x = 1; x < w - 1; x++) { const i = y * w + x; if (wall[i - 1] || wall[i + 1] || wall[i - w] || wall[i + w]) thick[i] = 1; }
+    const st = []; const push = i => { if (white[i] && !thick[i] && !m[i]) { m[i] = 1; st.push(i); } };
+    for (let x = 0; x < w; x++) { push(x); push((h - 1) * w + x); } for (let y = 0; y < h; y++) { push(y * w); push(y * w + w - 1); }
+    while (st.length) { const i = st.pop(), x = i % w; if (x > 0) push(i - 1); if (x < w - 1) push(i + 1); if (i >= w) push(i - w); if (i < w * (h - 1)) push(i + w); }
+    return { w, h, m };
+  } catch { return null; }
 }
 
 // 도면 이미지 위에 호실 영역을 얹은 평면도 (3D 좌표 정렬 없음). 도면 px 좌표계의 viewBox 를 쓰고, 영역을 누르면 그 호실의 3D 스캔으로 들어간다.
