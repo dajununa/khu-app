@@ -10,7 +10,7 @@ const liked = id => likedSet().includes(id);
 const setLiked = (id, on) => { try { localStorage.setItem('khu_liked', JSON.stringify(on ? [...new Set([...likedSet(), id])] : likedSet().filter(x => x !== id))); } catch {} };
 // 십자선이 사진에 구워지기 전(배포 전, 2026-10-15 16:50 KST 이전)에 올라온 3D 화면은 중앙에 십자선을 덧그린다
 const needsCross = r => r.shot && new Date(r.createdAt) < new Date('2026-10-15T07:50:00Z');
-const crossSvg = () => h('svg', { class: 'xhair', viewBox: '-50 -50 100 100' }, ...[['#fff', 8], ['#e0344f', 4]].map(([c, w]) => h('path', { d: 'M-17 0a17 17 0 1 0 34 0a17 17 0 1 0-34 0M-30 0H-8M8 0H30M0-30V-8M0 8V30', fill: 'none', stroke: c, 'stroke-width': w, 'stroke-linecap': 'round' })), h('circle', { r: 3, fill: '#e0344f' }));
+const crossSvg = () => h('svg', { class: 'xhair', viewBox: '-50 -50 100 100' }, ...[['#fff', 5], ['#e0344f', 2.5]].map(([c, w]) => h('path', { d: 'M-17 0a6 6 0 1 0 12 0a6 6 0 1 0-12 0M-14 0H-8M8 0H14M0-14V-8M0 8V14', fill: 'none', stroke: c, 'stroke-width': w, 'stroke-linecap': 'round' })), h('circle', { r: 2, fill: '#e0344f' }));
 const shotView = (r, src, cls, alt) => { const im = h('img', { class: cls, src, alt, loading: 'lazy' }); return needsCross(r) && src === r.shot ? h('div', { class: `xwrap ${cls}` }, im, crossSvg()) : im; };
 const badge = s => h('span', { class: `badge s-${sIdx(s)}` }, s);
 
