@@ -44,18 +44,20 @@ export function home() {
       h('text', { class: `tag ${scanned ? '' : 'off'}`, x: X + 14, y: y + 44 }, scanned ? '● 3D 스캔' : '준비 중'),
     );
   });
-  // 층 사이 계단: 건물 오른쪽에 창문과 같은 모양의 '계단창'을 층 경계에 세로로 걸쳐 놓고, 안에 계단 선을 그린다
-  const sx = X + W - 46, sw = 26, sh = 58;
+  // 층 사이 계단: 맨 오른쪽 창 자리에 놓은 계단 상자(유리색)와 안의 계단 칸(벽 색). 오르는 방향은 층마다 번갈아.
+  const sx = X + W - 52, sw = 34, sh = 56;
   const stairs = STAIR_PAIRS.map(([lo, hi], i) => {
-    const yb = TOP + FH * (i + 1), y0 = yb - sh / 2, id = `${lo}-${hi}`, on = STAIR_SCANNED.includes(id), n = 4, ly = yb === GROUND ? yb + 14 : yb + 3;
-    let d = `M ${sx + 4} ${y0 + sh - 6}`;                                        // 아래 왼쪽에서 위 오른쪽으로 오르는 계단 선
-    for (let k = 0; k < n; k++) d += ` h ${(sw - 8) / n} v ${-(sh - 12) / n}`;
+    const yb = TOP + FH * (i + 1), y0 = yb - sh / 2, id = `${lo}-${hi}`, on = STAIR_SCANNED.includes(id), n = 5, dir = i % 2 ? -1 : 1;
+    let d = dir > 0 ? `M ${sx} ${y0 + sh}` : `M ${sx + sw} ${y0 + sh}`;
+    for (let k = 0; k < n; k++) d += ` v ${-sh / n} h ${dir * sw / n}`;
+    d += ` V ${y0 + sh} Z`;
+    const ly = yb === GROUND ? yb + 19 : yb - 1;
     return h('g', { class: `stair ${on ? 'scanned' : ''}`, role: 'button', tabindex: 0, 'aria-label': `${stairName([lo, hi])} 보기`,
       onClick: () => (location.hash = `#/stairs/${id}`), onKeydown: e => e.key === 'Enter' && (location.hash = `#/stairs/${id}`) },
-      h('rect', { class: 'hit', x: sx - 4, y: y0 - 2, width: sw + 80, height: sh + 4 }),
-      h('rect', { class: 'swin', x: sx, y: y0, width: sw, height: sh, rx: 2 }),
-      h('path', { class: 'ico', d }),
-      h('text', { class: `stl ${on ? '' : 'off'}`, x: X + W + 7, y: ly }, stairName([lo, hi])));
+      h('rect', { class: 'shaft', x: sx - 4, y: y0 - 2, width: sw + 8, height: sh + 4, rx: 2 }),
+      h('path', { class: 'steps', d }),
+      h('text', { class: `stl ${on ? '' : 'off'}`, x: X + W + 7, y: ly }, stairName([lo, hi]).replace(' 계단', '')),
+      h('text', { class: `stl s ${on ? '' : 'off'}`, x: X + W + 7, y: ly + 11 }, '계단'));
   });
   const svg = h('svg', { class: 'elev', viewBox: `0 0 360 ${GROUND + FH + 12}`, role: 'group', 'aria-label': '생활과학대학 입면도' },
     h('rect', { x: 0, y: GROUND, width: 360, height: FH + 12, fill: '#d9d1bd' }),         // 땅속
@@ -71,6 +73,6 @@ export function home() {
       h('h1', {}, '건물 하자·분실물 신고'),
       h('p', { class: 'lead' }, '건물 안 고장·분실물을 3D 스캔에서 위치를 찍어 신고해요. ', h('b', {}, '아래에서 층을 눌러 주세요.'))),
     svg,
-    h('div', { class: 'legend' }, h('span', {}, h('i', { style: 'background:#f3e3d4' }), '3D 스캔 있음'), h('span', {}, h('i', { style: 'background:#ece7da' }), '준비 중')),
+    h('div', { class: 'legend' }, h('span', {}, '● 표시가 있는 층은 3D 스캔으로 신고할 수 있어요')),
   );
 }

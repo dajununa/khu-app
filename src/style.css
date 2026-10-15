@@ -44,9 +44,9 @@ h1, h2, h3 { margin: 0; }
 .elev { width: 100%; display: block; }
 .elev .floor { cursor: pointer; }
 .elev .floor .slab { fill: #ece7da; stroke: #2b2f3a; stroke-width: 2.5; transition: fill .15s; }
-.elev .floor.scanned .slab { fill: #f3e3d4; }
+.elev .floor.scanned .slab { fill: #ece7da; }
 .elev .floor.b1 .slab { fill: #cfc7b6; }
-.elev .floor:active .slab, .elev .floor:hover .slab { fill: #e7b9c5; }
+.elev .floor:active .slab, .elev .floor:hover .slab { fill: #e0d9c6; }
 .elev .win { fill: #bcd2dc; stroke: #2b2f3a; stroke-width: 1.5; }
 .elev .floor.b1 .win { fill: #a99f8b; }
 .elev .lbl { font: 700 15px -apple-system, sans-serif; fill: #2b2f3a; }
@@ -202,14 +202,13 @@ textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
 .home .elev { flex: 1 1 0; min-height: 0; width: 100%; height: auto; }
 .home .legend { flex: none; margin: 4px 0 8px; font-size: 11.5px; }
 
-/* 홈: 층 사이 계단 (건물 창문과 같은 모양의 계단창) */
+/* 홈: 층 사이 계단 — 건물과 같은 색(창문 유리색 + 벽 색) */
 .elev .stair { cursor: pointer; }
-.elev .stair .hit { fill: transparent; }
-.elev .stair .swin { fill: #bcd2dc; stroke: #2b2f3a; stroke-width: 1.5; }
-
-.elev .stair .ico { fill: none; stroke: #2b2f3a; stroke-width: 1.5; stroke-linejoin: round; opacity: .75; }
-.elev .stair:active .swin, .elev .stair:hover .swin { fill: #9fbac6; }
-.elev .stl { font: 700 10px -apple-system, sans-serif; fill: #8a1f3d; }
+.elev .stair .shaft { fill: #bcd2dc; stroke: #2b2f3a; stroke-width: 2; }
+.elev .stair .steps { fill: #f6f1e4; stroke: #2b2f3a; stroke-width: 1.8; stroke-linejoin: round; }
+.elev .stair:active .shaft, .elev .stair:hover .shaft { fill: #a3bfcb; }
+.elev .stl { font: 700 11px -apple-system, sans-serif; fill: #8a1f3d; }
+.elev .stl.s { font-size: 9.5px; }
 .elev .stl.off { fill: #6b6f7b; }
 
 /* 스캔 구역: 연한 장밋빛 (파란색 아님) */
