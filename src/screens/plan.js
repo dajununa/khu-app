@@ -66,11 +66,11 @@ export async function plan(floorId) {
   const svg = h('svg', { class: 'plan', viewBox: `${minX} ${minY} ${W} ${H}`, role: 'group', 'aria-label': `${floor.name} 평면도` },
     lines('wall', 3.3), lines('floorfill', 2.7),
     ...wps.map(w => { const [x, y] = P(w); return h('g', { role: 'button', 'aria-label': '이 위치 3D로 보기', onClick: () => go(w.scene, w) },
-      h('circle', { class: 'hit', cx: x, cy: y, r: 1.7 }), h('circle', { class: 'pt', cx: x, cy: y, r: .6 })); }),
+      h('circle', { class: 'hit', cx: x, cy: y, r: 2.2 })); }), // 눈에 보이는 점 없이 터치 영역만 둔다
     wps.length && lab.first ? h('text', { class: 'tx s', x: P(wps[0])[0], y: P(wps[0])[1] - 1.3 }, lab.first) : null,
     wps.length && lab.last ? h('text', { class: 'tx s', x: P(wps.at(-1))[0], y: P(wps.at(-1))[1] - 1.3 }, lab.last) : null,
   );
-  root.append(h('p', { class: 'hint' }, '신고할 위치의 점을 누르면 3D 스캔으로 이동해요.'), h('div', { class: 'plan-wrap' }, svg));
+  root.append(h('p', { class: 'hint' }, '신고할 위치를 누르면 3D 스캔으로 이동해요.'), h('div', { class: 'plan-wrap' }, svg));
   return root;
 }
 
@@ -92,7 +92,7 @@ async function evacPlan(metaUrl, wps, P, go, lab, name) {
   img.setAttribute('href', '/plans/' + meta.image.file); img.setAttribute('width', iw); img.setAttribute('height', ih);
   img.setAttribute('transform', `matrix(${m.join(' ')})`);
   const upright = (w, text) => { const [x, y] = P(w); return h('text', { class: 'tx s', transform: `translate(${x} ${y}) rotate(${deg}) translate(0 -1.6)` }, text); }; // 회전 보정: 글자는 똑바로
-  const world = h('g', {}, img, ...wps.map(w => h('circle', { class: 'pt', cx: P(w)[0], cy: P(w)[1], r: .3 })),
+  const world = h('g', {}, img,
     lab.first ? upright(wps[0], lab.first) : null, lab.last ? upright(wps.at(-1), lab.last) : null);
   const g = h('g', { transform: `rotate(${-deg})` }, world);
   const svg = h('svg', { class: 'plan evac', role: 'group', 'aria-label': `${name} 평면도` }, g);
