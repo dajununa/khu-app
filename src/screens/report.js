@@ -35,6 +35,9 @@ export function report() {
   ta.value = draft.detail;
   const cnt = h('div', { class: 'counter' }, `${ta.value.length}/1000`);
 
+  const pinIn = h('input', { class: 'pin4', type: 'password', inputmode: 'numeric', pattern: '[0-9]*', maxlength: 4, autocomplete: 'off', placeholder: '숫자 4자리', 'aria-label': '수정·삭제용 PIN 4자리' });
+  pinIn.addEventListener('input', () => { pinIn.value = pinIn.value.replace(/\D/g, '').slice(0, 4); });
+
   const photoBox = h('label', { class: 'photo' });
   const input = h('input', { type: 'file', accept: 'image/*' });
   const renderPhoto = () => { photoBox.replaceChildren(draft.photo ? h('img', { src: draft.photo, alt: '첨부한 사진' }) : h('div', {}, h('div', { style: 'font-size:28px' }, '📷'), h('div', {}, '사진 찍기 / 선택')), input); };
@@ -73,9 +76,10 @@ export function report() {
     const detail = ta.value.trim();
     if (!draft.category) { toast('항목을 먼저 골라 주세요.'); catsEl.scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
     if (draft.category === '기타' && !detail) { toast('기타는 내용을 적어 주세요.'); ta.focus(); return; }
+    if (!/^\d{4}$/.test(pinIn.value)) { toast('수정·삭제용 PIN 숫자 4자리를 입력해 주세요.'); pinIn.focus(); return; }
     submit.disabled = true; submit.textContent = '접수 중…';
     try {
-      const row = await api.create({ kind: draft.kind, category: draft.category, lostFound: draft.kind === '분실물' ? draft.lostFound : null, detail, locationLabel: draft.label, pin: draft.pin, photo: draft.photo, shot: draft.shot });
+      const row = await api.create({ kind: draft.kind, category: draft.category, lostFound: draft.kind === '분실물' ? draft.lostFound : null, detail, locationLabel: draft.label, pin: draft.pin, photo: draft.photo, shot: draft.shot, ownerPin: pinIn.value });
       resetDraft(); nav.tour = null; nav.justAdded = row.id; toast('접수되었어요. 접수현황에서 확인할 수 있어요.'); location.hash = '#/board';
     } catch (e) { toast(e.message); submit.disabled = false; submit.textContent = '신고 접수'; }
   });
@@ -89,6 +93,7 @@ export function report() {
     h('div', {}, catLbl, catsEl),
     h('div', {}, h('span', { class: 'lbl' }, '직접 찍은 사진 (선택)'), photoBox),
     h('div', {}, h('span', { class: 'lbl' }, '세부 내용 (선택)'), ta, cnt),
+    h('div', {}, h('span', { class: 'lbl' }, '수정·삭제용 PIN (필수)'), pinIn, h('p', { class: 'hint', style: 'margin:6px 0 0' }, '나중에 내 글을 고치거나 지울 때 써요. 잊어버리면 찾을 수 없으니 기억해 두세요.')),
     submit,
     h('p', { class: 'hint', style: 'margin:0' }, '신고 내용은 접수현황에서 모두에게 공개되며, 작성자 정보는 저장하지 않아요.'),
   ));

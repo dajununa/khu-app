@@ -102,9 +102,46 @@ export function board() {
                 if (!confirm('이 신고를 삭제할까요? 되돌릴 수 없어요.')) return;
                 try { await api.remove(r.id, admin()); rows = rows.filter(x => x.id !== r.id); bg.remove(); draw(); toast('삭제했어요.'); }
                 catch (e) { toast(e.message); if (/PIN/.test(e.message)) sessionStorage.removeItem('khu_pin'), paint(); } } }, '🗑 이 글 삭제'))
-          : h('button', { class: 'linkbtn', onClick: () => { const p = prompt('관리자 PIN을 입력하세요'); if (p) { sessionStorage.setItem('khu_pin', p); paint(); draw(); } } }, '관리자')].filter(Boolean));
+          : h('div', { style: 'display:flex;gap:14px;flex-wrap:wrap' }, h('button', { class: 'linkbtn', onClick: async () => {
+              const p = prompt('접수할 때 정한 PIN 4자리를 입력하세요'); if (!p) return;
+              try { await api.verifyOwner(r.id, p.trim()); openEdit(r, p.trim(), bg); } catch (e) { toast(e.message); } } }, '✏️ 내 글 수정·삭제'),
+            h('button', { class: 'linkbtn', onClick: () => { const p = prompt('관리자 PIN을 입력하세요'); if (p) { sessionStorage.setItem('khu_pin', p); paint(); draw(); } } }, '관리자'))].filter(Boolean));
     };
     paint(); bg.append(sheet); document.getElementById('app').append(bg);
+  }
+  // 작성자 수정 화면 (접수할 때 정한 PIN 으로 확인된 뒤에만 열린다)
+  function openEdit(r, pin, bg) {
+    bg.replaceChildren();
+    const sheet = h('div', { class: 'sheet', role: 'dialog', 'aria-label': '내 글 수정' });
+    let category = r.category, lostFound = r.lostFound || '분실', photo = null;
+    const ta = h('textarea', { maxlength: 1000 }); ta.value = r.detail || '';
+    const cats = h('div', { class: 'cats', role: 'radiogroup' });
+    const lf = h('div', { class: 'seg' });
+    const drawCats = () => {
+      cats.replaceChildren(...CATEGORIES[r.kind].map(([name, icon]) => h('button', { type: 'button', role: 'radio', 'aria-checked': String(category === name), class: `cat ${category === name ? 'on' : ''}`, onClick: () => { category = name; drawCats(); } }, h('span', { class: 'ic' }, icon), name)));
+      lf.hidden = r.kind !== '분실물';
+      lf.replaceChildren(...['분실', '습득'].map(v => h('button', { type: 'button', class: lostFound === v ? 'on' : '', onClick: () => { lostFound = v; drawCats(); } }, v === '분실' ? '잃어버렸어요' : '주웠어요')));
+    };
+    const photoBox = h('label', { class: 'photo' });
+    const input = h('input', { type: 'file', accept: 'image/*' });
+    const renderPhoto = () => { const src = photo || r.photo; photoBox.replaceChildren(src ? h('img', { src, alt: '사진' }) : h('div', {}, h('div', { style: 'font-size:28px' }, '📷'), h('div', {}, '사진 찍기 / 선택')), input); };
+    input.addEventListener('change', async () => { const f = input.files[0]; if (!f) return; try { photo = await shrinkImage(f); renderPhoto(); } catch (e) { toast(e.message); } });
+    const save = h('button', { class: 'btn block', type: 'button' }, '저장');
+    save.addEventListener('click', async () => {
+      const detail = ta.value.trim();
+      if (!category) { toast('항목을 골라 주세요.'); return; }
+      if (category === '기타' && !detail) { toast('기타는 내용을 적어 주세요.'); ta.focus(); return; }
+      save.disabled = true;
+      try { const u = await api.update(r.id, pin, { category, detail, lostFound: r.kind === '분실물' ? lostFound : null, photo }); Object.assign(r, u); draw(); bg.remove(); toast('수정했어요.'); }
+      catch (e) { toast(e.message); save.disabled = false; }
+    });
+    const del = h('button', { class: 'btn block ghost', type: 'button', style: 'margin-top:10px;color:#c0392b;border-color:#c0392b', onClick: async () => {
+      if (!confirm('이 신고를 삭제할까요? 되돌릴 수 없어요.')) return;
+      try { await api.remove(r.id, pin, true); rows = rows.filter(x => x.id !== r.id); draw(); bg.remove(); toast('삭제했어요.'); } catch (e) { toast(e.message); } } }, '🗑 이 글 삭제');
+    sheet.append(h('div', { class: 'grab' }), h('h2', { style: 'font-size:18px;margin:8px 0 12px' }, '내 글 수정'),
+      h('div', { class: 'form' }, h('div', {}, h('span', { class: 'lbl' }, r.kind === '하자' ? '어떤 하자인가요?' : '어떤 물건인가요?'), cats), h('div', {}, lf),
+        h('div', {}, h('span', { class: 'lbl' }, '직접 찍은 사진'), photoBox), h('div', {}, h('span', { class: 'lbl' }, '세부 내용'), ta), save, del));
+    drawCats(); renderPhoto(); bg.append(sheet);
   }
   async function refresh() {
     try { rows = await api.list(); draw(); } catch { if (!rows.length) list.replaceChildren(h('div', { class: 'empty' }, h('b', {}, '불러오지 못했어요'), '서버가 켜져 있는지 확인해 주세요.')); }

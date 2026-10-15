@@ -78,3 +78,44 @@ returns integer language sql security definer set search_path = public as $$
   update public.reports set likes = greatest(0, likes + (case when delta < 0 then -1 else 1 end)) where id = rid returning likes;
 $$;
 grant execute on function public.like_report(uuid, int) to anon;
+
+-- 작성자 PIN (접수할 때 정한 4자리로 본인 글 수정·삭제). 이 부분만 따로 실행해도 됩니다.
+-- 정책이 없어서 앱에서는 읽을 수 없고, 아래 함수로만 확인합니다.
+create table if not exists public.report_pins (report_id uuid primary key references public.reports(id) on delete cascade, pin text not null);
+alter table public.report_pins enable row level security;
+
+-- 방금(2분 안에) 접수된 글에만, 아직 PIN 이 없을 때 한 번 정할 수 있다
+create or replace function public.set_owner_pin(rid uuid, pin_in text)
+returns void language plpgsql security definer set search_path = public as $$
+begin
+  if pin_in !~ '^[0-9]{4}$' then raise exception 'PIN은 숫자 4자리여야 합니다.'; end if;
+  if not exists (select 1 from public.reports where id = rid and created_at > now() - interval '2 minutes') then raise exception 'PIN을 정할 수 없습니다.'; end if;
+  insert into public.report_pins (report_id, pin) values (rid, pin_in) on conflict do nothing;
+end $$;
+grant execute on function public.set_owner_pin(uuid, text) to anon;
+
+create or replace function public.check_owner_pin(rid uuid, pin_in text)
+returns boolean language sql security definer set search_path = public as $$
+  select exists (select 1 from public.report_pins where report_id = rid and pin = pin_in);
+$$;
+grant execute on function public.check_owner_pin(uuid, text) to anon;
+
+create or replace function public.update_report(rid uuid, pin_in text, new_category text, new_detail text, new_lost_found text, new_photo text)
+returns void language plpgsql security definer set search_path = public as $$
+begin
+  if not public.check_owner_pin(rid, pin_in) then raise exception 'PIN이 올바르지 않습니다.'; end if;
+  update public.reports set category = left(coalesce(nullif(trim(new_category), ''), '기타'), 20), detail = left(coalesce(new_detail, ''), 1000),
+    lost_found = case when kind = '분실물' and new_lost_found in ('분실','습득') then new_lost_found else lost_found end,
+    photo = coalesce(new_photo, photo) where id = rid;
+end $$;
+grant execute on function public.update_report(uuid, text, text, text, text, text) to anon;
+
+-- 글 삭제: 관리자 PIN 또는 작성자 PIN (위의 delete_report 를 덮어씁니다)
+create or replace function public.delete_report(rid uuid, pin_in text)
+returns void language plpgsql security definer set search_path = public as $$
+begin
+  if pin_in is distinct from (select pin from public.admin_secret limit 1) and not public.check_owner_pin(rid, pin_in) then
+    raise exception 'PIN이 올바르지 않습니다.';
+  end if;
+  delete from public.reports where id = rid;
+end $$;
