@@ -229,11 +229,14 @@ textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
 .stairs-body .hint { margin: 0 16px 10px; text-align: center; font-size: 14px; }
 .section { width: 100%; height: auto; max-height: calc(100vh - 240px); display: block; }
 .section .floor { fill: none; stroke: var(--ink); stroke-width: 3; stroke-linecap: round; }
-.section .bg { fill: var(--bg); stroke: var(--ink); stroke-width: 2.5; stroke-linejoin: round; transition: fill .15s; }
+.section .bg { fill: var(--bg); transition: fill .15s; }
+.section .outline, .section .divider { fill: none; stroke: var(--ink); stroke-linejoin: round; pointer-events: none; }
+.section .outline { stroke-width: 2.5; }
+.section .divider { stroke-width: 1.5; opacity: .5; }
 .section .part.on { cursor: pointer; outline: none; }
-.section .part.on:hover .bg, .section .part.on:active .bg, .section .part.on:focus-visible .bg { fill: color-mix(in srgb, var(--accent) 16%, var(--surface)); }
-.section .part.on:focus-visible .bg { stroke: var(--accent); stroke-width: 3.5; }
-.section .part.off .bg { fill: color-mix(in srgb, var(--muted) 24%, var(--surface)); stroke: var(--muted); }
+.section .part.on:hover .bg, .section .part.on:active .bg { fill: color-mix(in srgb, var(--accent) 16%, var(--surface)); }
+.section .part.on:focus-visible .bg { fill: color-mix(in srgb, var(--accent) 28%, var(--surface)); }
+.section .part.off .bg { fill: color-mix(in srgb, var(--muted) 24%, var(--surface)); }
 .section text { text-anchor: middle; pointer-events: none; user-select: none; }
 .section .nm { font-size: 16px; font-weight: 700; fill: var(--ink); }
 .section .part.off .nm { fill: var(--muted); }

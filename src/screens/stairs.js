@@ -14,7 +14,7 @@ const PARTS = [ // 아래층에서 올라가는 순서: 아래 계단(올라가�
 const RUN = 50, RISE = 56, STEPS = 4, LAND = 84, PAD = 8;
 const X0 = 56, XL = X0 + RUN * STEPS, XR = XL + LAND; // 계단 시작 · 층계참 왼쪽 끝 · 층계참 오른쪽 끝
 const Y3 = 30, YL = Y3 + RISE * STEPS, Y2 = YL + RISE * STEPS; // 위층 바닥 · 층계참 윗면 · 아래층 바닥
-const VIEW = `${-PAD} 0 ${XR + PAD * 2} ${Y2 + PAD + 2}`; // 그림이 좌우 같은 여백으로 가운데에 놓이게
+const VIEW = `${-PAD} 0 ${XR + PAD * 2} ${Y2 + PAD}`; // 그림이 좌우 같은 여백으로 가운데에 놓이게
 const steps = (x, y, dir) => { // (x, y)에서 dir 방향(+1 오른쪽, -1 왼쪽)으로 올라가는 계단 윤곽
   let d = `M${x} ${y}`;
   for (let i = 1; i <= STEPS; i++) d += `V${y - RISE * i}H${x + dir * RUN * i}`;
@@ -26,6 +26,15 @@ const SHAPES = {
   down: `${steps(XL, YL, -1)}V${YL}Z`,
 };
 const LABEL = { up: [XL - 67, Y2 - 75], landing: [(XL + XR) / 2, YL + RISE / 2], down: [X0 + 67, YL - 75] }; // 각 부분의 가운데 [x, y]
+// 한 덩어리로 보이게: 바깥 윤곽은 굵게, 부분 사이 경계는 가는 선으로 그린다
+const OUTLINE = (() => {
+  let d = `M${X0} ${Y3}`;
+  for (let i = 1; i < STEPS; i++) d += `H${X0 + RUN * i}V${Y3 + RISE * i}`; // 위 계단 윗면
+  d += `H${XL}V${YL}H${XR}V${YL + RISE}H${XL}V${Y2}H${X0}`; // 층계참을 돌아 아래층 바닥까지
+  for (let i = 1; i < STEPS; i++) d += `V${Y2 - RISE * i}H${X0 + RUN * i}`; // 아래 계단 윗면
+  return `${d}V${YL}H${X0}Z`; // 위 계단 밑면
+})();
+const DIVIDERS = `M${XL} ${YL}V${YL + RISE}M${XL - RUN} ${YL}H${XL}`; // 층계참|아래 계단, 아래 계단|위 계단
 const floorLabel = id => (id === 'B1' ? 'B1' : id.replace('F', '')) + '층';
 
 export async function stairs(pairId) {
@@ -53,6 +62,7 @@ export async function stairs(pairId) {
   const section = h('svg', { class: 'section', viewBox: VIEW, role: 'group', 'aria-label': `${stairName(pair)} 단면도` },
     h('path', { class: 'floor', d: `M0 ${Y3}H${X0}M0 ${Y2}H${XL}` }), // 위층·아래층 바닥선
     ...parts,
+    h('path', { class: 'outline', d: OUTLINE }), h('path', { class: 'divider', d: DIVIDERS }),
     h('text', { class: 'fl', x: 0, y: Y3 - 9 }, floorLabel(pair[1])), h('text', { class: 'fl', x: 0, y: Y2 - 9 }, floorLabel(pair[0])));
 
   root.append(h('div', { class: 'stairs-body' },
