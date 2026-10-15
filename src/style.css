@@ -254,3 +254,10 @@ textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
 .bigchoice b { font-size: 21px; }
 .bigchoice small { color: var(--muted); font-size: 13px; }
 .bigchoice:active { border-color: var(--accent); }
+
+.xwrap { position: relative; display: block; overflow: hidden; }
+.xwrap > img { width: 100%; height: 100%; object-fit: cover; display: block; border-radius: inherit; }
+.xwrap .xhair { position: absolute; left: 50%; top: 50%; width: 46%; transform: translate(-50%, -50%); pointer-events: none; }
+.item .xwrap.th { border-radius: 12px; flex: none; }
+.sheet .ba .xwrap { aspect-ratio: 1; border-radius: 12px; }
+.sheet .ba .xwrap > img { aspect-ratio: auto; }

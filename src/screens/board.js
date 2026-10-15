@@ -8,6 +8,10 @@ const tagText = r => (r.kind === '분실물' ? `${r.lostFound || '분실물'} ·
 const likedSet = () => { try { return JSON.parse(localStorage.getItem('khu_liked') || '[]'); } catch { return []; } };
 const liked = id => likedSet().includes(id);
 const setLiked = (id, on) => { try { localStorage.setItem('khu_liked', JSON.stringify(on ? [...new Set([...likedSet(), id])] : likedSet().filter(x => x !== id))); } catch {} };
+// 십자선이 사진에 구워지기 전(배포 전, 2026-10-15 16:50 KST 이전)에 올라온 3D 화면은 중앙에 십자선을 덧그린다
+const needsCross = r => r.shot && new Date(r.createdAt) < new Date('2026-10-15T07:50:00Z');
+const crossSvg = () => h('svg', { class: 'xhair', viewBox: '-50 -50 100 100' }, ...[['#fff', 8], ['#e0344f', 4]].map(([c, w]) => h('path', { d: 'M-17 0a17 17 0 1 0 34 0a17 17 0 1 0-34 0M-30 0H-8M8 0H30M0-30V-8M0 8V30', fill: 'none', stroke: c, 'stroke-width': w, 'stroke-linecap': 'round' })), h('circle', { r: 3, fill: '#e0344f' }));
+const shotView = (r, src, cls, alt) => { const im = h('img', { class: cls, src, alt, loading: 'lazy' }); return needsCross(r) && src === r.shot ? h('div', { class: `xwrap ${cls}` }, im, crossSvg()) : im; };
 const badge = s => h('span', { class: `badge s-${sIdx(s)}` }, s);
 
 export function board() {
@@ -32,7 +36,7 @@ export function board() {
   function card(r) {
     const img = r.shot || r.photo;
     const el = h('button', { class: `item ${nav.justAdded === r.id ? 'new' : ''}`, onClick: () => openSheet(r) },
-      img ? h('img', { class: 'th', src: img, alt: '', loading: 'lazy' }) : h('div', { class: 'th none' }, '사진 없음'),
+      img ? shotView(r, img, 'th', '') : h('div', { class: 'th none' }, '사진 없음'),
       h('div', { class: 'body' },
         h('div', { class: 'row' }, h('span', { class: 'kind' }, tagText(r)), badge(r.status), h('span', { class: 'dt' }, ago(r.createdAt))),
         r.likes ? h('div', { class: 'lk' }, `♥ ${r.likes}`) : null,
@@ -45,7 +49,7 @@ export function board() {
     const admin = () => sessionStorage.getItem('khu_pin');
     const sheet = h('div', { class: 'sheet', role: 'dialog', 'aria-label': '신고 상세' });
     const paint = () => {
-      sheet.replaceChildren(
+      sheet.replaceChildren(...[
         h('div', { class: 'grab' }),
         h('div', { class: 'row', style: 'display:flex;gap:6px;align-items:center;flex-wrap:wrap' }, h('span', { class: 'kind' }, tagText(r)), badge(r.status), ),
         h('div', { class: 'meta' }, h('span', {}, `${fullTime(r.createdAt)} 신고`),
@@ -58,7 +62,7 @@ export function board() {
         h('div', { class: 'steps' }, STATUSES.map((s, i) => h('div', { class: i <= sIdx(r.status) ? 'on' : '' }, s))),
         r.detail ? h('p', {}, r.detail) : h('p', { style: 'color:var(--muted)' }, '추가 설명 없음'),
         h('div', { class: 'ba' },
-          h('figure', {}, r.shot || r.photo ? h('img', { src: r.shot || r.photo, alt: '처리 전' }) : h('div', { class: 'ph' }, '사진 없음'), h('figcaption', {}, '처리 전')),
+          h('figure', {}, r.shot || r.photo ? shotView(r, r.shot || r.photo, 'bimg', '처리 전') : h('div', { class: 'ph' }, '사진 없음'), h('figcaption', {}, '처리 전')),
           h('figure', {}, r.afterPhoto ? h('img', { src: r.afterPhoto, alt: '처리 후' }) : h('div', { class: 'ph dash' }, r.status === '완료' ? '처리 후 사진 준비 중' : '완료되면 처리 후 사진이 올라와요'), h('figcaption', {}, '처리 후'))),
         admin() ? h('label', { class: 'btn block ghost', style: 'margin:0 0 12px;text-align:center;display:block;line-height:20px' }, r.afterPhoto ? '처리 후 사진 바꾸기 (관리자)' : '처리 후 사진 올리기 (관리자)',
           h('input', { type: 'file', accept: 'image/*', style: 'display:none', onChange: async e => {
@@ -74,7 +78,7 @@ export function board() {
                 if (!confirm('이 신고를 삭제할까요? 되돌릴 수 없어요.')) return;
                 try { await api.remove(r.id, admin()); rows = rows.filter(x => x.id !== r.id); bg.remove(); draw(); toast('삭제했어요.'); }
                 catch (e) { toast(e.message); if (/PIN/.test(e.message)) sessionStorage.removeItem('khu_pin'), paint(); } } }, '🗑 이 글 삭제'))
-          : h('button', { class: 'linkbtn', onClick: () => { const p = prompt('관리자 PIN을 입력하세요'); if (p) { sessionStorage.setItem('khu_pin', p); paint(); } } }, '관리자'));
+          : h('button', { class: 'linkbtn', onClick: () => { const p = prompt('관리자 PIN을 입력하세요'); if (p) { sessionStorage.setItem('khu_pin', p); paint(); } } }, '관리자')].filter(Boolean));
     };
     paint(); bg.append(sheet); document.getElementById('app').append(bg);
   }
