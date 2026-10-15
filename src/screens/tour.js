@@ -177,12 +177,12 @@ export async function openTour(host, opts, cb) {
         c.width = Math.round(canvas.width * r); c.height = Math.round(canvas.height * r);
         const g = c.getContext('2d'); g.drawImage(canvas, 0, 0, c.width, c.height);
         const cx = c.width / 2, cy = c.height / 2, pr = Math.max(6, c.width * 0.02); // 핀한 위치(화면 중앙)에 십자선 표시
-        for (const [col, lw] of [['#ffffff', 4], ['#e0344f', 2]]) {
+        for (const [col, lw] of [['#ffffff', Math.max(5, c.width * 0.014)], ['#e0344f', Math.max(2.5, c.width * 0.007)]]) {
           g.strokeStyle = col; g.lineWidth = lw; g.lineCap = 'round';
           g.beginPath(); g.arc(cx, cy, pr, 0, Math.PI * 2); g.moveTo(cx - pr * 1.7, cy); g.lineTo(cx - pr * 0.45, cy); g.moveTo(cx + pr * 0.45, cy); g.lineTo(cx + pr * 1.7, cy);
           g.moveTo(cx, cy - pr * 1.7); g.lineTo(cx, cy - pr * 0.45); g.moveTo(cx, cy + pr * 0.45); g.lineTo(cx, cy + pr * 1.7); g.stroke();
         }
-        g.fillStyle = '#e0344f'; g.beginPath(); g.arc(cx, cy, Math.max(1.5, pr * 0.2), 0, Math.PI * 2); g.fill(); res(c.toDataURL('image/jpeg', 0.75));
+        g.fillStyle = '#e0344f'; g.beginPath(); g.arc(cx, cy, Math.max(2.5, pr * 0.3), 0, Math.PI * 2); g.fill(); res(c.toDataURL('image/jpeg', 0.75));
       });
       app.renderNextFrame = true;
     });
