@@ -60,7 +60,7 @@ export function board() {
             paint(); draw(); } }, `${liked(r.id) ? '♥' : '♡'} 공감 ${r.likes || 0}`)),
         h('h2', { style: 'font-size:18px;margin-top:8px' }, r.locationLabel || '위치 정보 없음'),
         h('div', { class: 'steps' }, STATUSES.map((s, i) => h('div', { class: i <= sIdx(r.status) ? 'on' : '' }, s))),
-        r.detail ? h('p', {}, r.detail) : h('p', { style: 'color:var(--muted)' }, '추가 설명 없음'),
+        r.detail ? h('p', {}, r.detail) : null,
         h('div', { class: 'ba' },
           h('figure', {}, r.shot || r.photo ? shotView(r, r.shot || r.photo, 'bimg', '처리 전') : h('div', { class: 'ph' }, '사진 없음'), h('figcaption', {}, '처리 전')),
           h('figure', {}, r.afterPhoto ? h('img', { src: r.afterPhoto, alt: '처리 후' }) : h('div', { class: 'ph dash' }, r.status === '완료' ? '처리 후 사진 준비 중' : '완료되면 처리 후 사진이 올라와요'), h('figcaption', {}, '처리 후'))),
