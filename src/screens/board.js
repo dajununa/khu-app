@@ -1,4 +1,4 @@
-import { h, toast, ago, fullTime } from '../lib/dom.js';
+import { h, ago, fullTime } from '../lib/dom.js';
 import { api } from '../lib/api.js';
 import { STATUSES } from '../data/config.js';
 import { goTour, nav } from '../lib/state.js';
@@ -23,7 +23,7 @@ export function board() {
   function draw() {
     drawChips();
     const shown = rows.filter(r => (kind === '전체' || r.kind === kind) && (status === '전체' || r.status === status));
-    list.replaceChildren(...(shown.length ? shown.map(card) : [h('div', { class: 'empty' }, h('b', {}, '접수된 내용이 없어요'), '홈에서 층을 골라 첫 신고를 남겨 보세요.')]));
+    list.replaceChildren(...(shown.length ? shown.map(card) : [h('div', { class: 'empty' }, h('b', {}, '접수된 내용이 없어요'), '고장 신고에서 층을 골라 첫 신고를 남겨 보세요.')]));
   }
   function card(r) {
     const img = r.photo || r.shot;
@@ -37,7 +37,6 @@ export function board() {
   }
   function openSheet(r) {
     const bg = h('div', { class: 'sheet-bg', onClick: e => e.target === bg && bg.remove() });
-    const admin = () => sessionStorage.getItem('khu_pin');
     const sheet = h('div', { class: 'sheet', role: 'dialog', 'aria-label': '신고 상세' });
     const paint = () => {
       sheet.replaceChildren(
@@ -48,10 +47,8 @@ export function board() {
         h('p', {}, r.detail),
         h('div', { class: 'imgs' }, r.photo ? h('figure', {}, h('img', { src: r.photo, alt: '신고 사진' }), h('figcaption', {}, '현장 사진')) : null, r.shot ? h('figure', {}, h('img', { src: r.shot, alt: '3D 화면' }), h('figcaption', {}, '핀한 3D 화면')) : null),
         r.pin?.waypoint ? h('button', { class: 'btn block ghost', onClick: () => { bg.remove(); goTour({ scene: r.pin.scene, floor: r.pin.floor, waypointId: r.pin.waypoint, yaw: r.pin.yaw, pitch: r.pin.pitch, mode: 'view' }); } }, '📍 3D로 위치 보기') : null,
-        admin()
-          ? h('div', { class: 'admin' }, h('span', { class: 'lbl' }, '처리 상태 변경 (관리자)'), h('div', { class: 'seg' }, STATUSES.map(s => h('button', { class: s === r.status ? 'on' : '', onClick: async () => {
-              try { const u = await api.setStatus(r.id, s, admin()); Object.assign(r, u); paint(); draw(); } catch (e) { toast(e.message); if (/PIN/.test(e.message)) sessionStorage.removeItem('khu_pin'), paint(); } } }, s))))
-          : h('button', { class: 'linkbtn', onClick: () => { const p = prompt('관리자 PIN을 입력하세요'); if (p) { sessionStorage.setItem('khu_pin', p); paint(); } } }, '관리자'));
+        h('p', { class: 'hint', style: 'margin:12px 0 0;text-align:center' }, '처리 상태는 행정실에서 바꿔요.'),
+      );
     };
     paint(); bg.append(sheet); document.getElementById('app').append(bg);
   }
