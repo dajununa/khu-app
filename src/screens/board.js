@@ -69,6 +69,8 @@ export function board() {
   function openSheet(r) {
     const bg = h('div', { class: 'sheet-bg', onClick: e => e.target === bg && bg.remove() });
     const admin = () => sessionStorage.getItem('khu_pin');
+    const lost = r.kind === '분실물'; // 분실물은 처리 전 칸에 직접 찍은 사진, 핀한 3D 화면은 아래 칸
+    const before = lost ? r.photo || r.shot : r.shot || r.photo;
     const sheet = h('div', { class: 'sheet', role: 'dialog', 'aria-label': '신고 상세' });
     const paint = () => {
       sheet.replaceChildren(...[
@@ -84,14 +86,14 @@ export function board() {
         h('div', { class: 'steps' }, STATUSES.map((s, i) => h('div', { class: i <= sIdx(r.status) ? 'on' : '' }, s))),
         r.detail ? h('p', {}, r.detail) : null,
         h('div', { class: 'ba' },
-          h('figure', {}, r.shot || r.photo ? shotView(r, r.shot || r.photo, 'bimg', '처리 전') : h('div', { class: 'ph' }, '사진 없음'), h('figcaption', {}, '처리 전')),
+          h('figure', {}, before ? shotView(r, before, 'bimg', '처리 전') : h('div', { class: 'ph' }, '사진 없음'), h('figcaption', {}, '처리 전')),
           h('figure', {}, r.afterPhoto ? h('img', { src: r.afterPhoto, alt: '처리 후' }) : h('div', { class: 'ph dash' }, r.status === '완료' ? '처리 후 사진 준비 중' : '완료되면 처리 후 사진이 올라와요'), h('figcaption', {}, '처리 후'))),
         admin() ? h('label', { class: 'btn block ghost', style: 'margin:0 0 12px;text-align:center;display:block;line-height:20px' }, r.afterPhoto ? '처리 후 사진 바꾸기 (관리자)' : '처리 후 사진 올리기 (관리자)',
           h('input', { type: 'file', accept: 'image/*', style: 'display:none', onChange: async e => {
             const f = e.target.files[0]; if (!f) return;
             try { const u = await api.setAfterPhoto(r.id, await shrinkImage(f), admin()); Object.assign(r, u); paint(); draw(); toast('처리 후 사진을 올렸어요.'); }
             catch (err) { toast(err.message); if (/PIN/.test(err.message)) sessionStorage.removeItem('khu_pin'), paint(); } } })) : null,
-        h('div', { class: 'imgs' }, r.photo && r.shot ? h('figure', {}, h('img', { src: r.photo, alt: '신고 사진' }), h('figcaption', {}, '현장 사진')) : null, null),
+        h('div', { class: 'imgs' }, r.photo && r.shot ? (lost ? h('figure', {}, shotView(r, r.shot, 'bimg', '핀한 3D 화면'), h('figcaption', {}, '핀한 위치')) : h('figure', {}, h('img', { src: r.photo, alt: '신고 사진' }), h('figcaption', {}, '현장 사진'))) : null, null),
         admin() && r.pin?.waypoint ? h('button', { class: 'btn block ghost', onClick: () => { bg.remove(); goTour({ scene: r.pin.scene, floor: r.pin.floor, waypointId: r.pin.waypoint, yaw: r.pin.yaw, pitch: r.pin.pitch, mode: 'view' }); } }, '📍 3D로 위치 보기') : null,
         admin()
           ? h('div', { class: 'admin' }, h('span', { class: 'lbl' }, '처리 상태 변경 (관리자)'), h('div', { class: 'seg' }, STATUSES.map(s => h('button', { class: s === r.status ? 'on' : '', onClick: async () => {

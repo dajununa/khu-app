@@ -101,6 +101,11 @@ export async function openTour(host, opts, cb) {
   let yaw, pitch; // 보정 기준 값. 저장·외부 값(opts, 핀)은 스캔 기준이라 바꿔서 쓴다
   if (opts.yaw != null) ({ yaw, pitch } = toLevel(L, opts.yaw, opts.pitch ?? 0));
   else { ({ yaw } = toLevel(L, cur.heading, 0)); pitch = L ? 0 : opts.pitch ?? 0; } // 보정 중이면 기본 시선은 수평
+  let pinWorld = null; // 신고 때 핀한 자리: 처음 지점에서 핀 방향으로 3m 떨어진 한 점에 고정 (이동해도 따라오지 않는다)
+  if (opts.mode === 'view' && opts.yaw != null) {
+    const r = Math.PI / 180, d = [-Math.sin(opts.yaw * r) * Math.cos((opts.pitch ?? 0) * r), Math.cos(opts.yaw * r) * Math.cos((opts.pitch ?? 0) * r), Math.sin((opts.pitch ?? 0) * r)];
+    pinWorld = cur.pos.map((v, i) => v + d[i] * 3);
+  }
   let moving = null, arrows = [];
   const tmp = new pc.Vec3(), tmp2 = new pc.Vec3();
   const setPos = p => cam.setLocalPosition(p[0], p[1], p[2]);
@@ -159,9 +164,8 @@ export async function openTour(host, opts, cb) {
       if (ok) a.btn.style.transform = `translate(${s.x}px, ${s.y}px)`;
       if (ok) { a.btn.style.left = 0; a.btn.style.top = 0; }
     }
-    if (pinMark) {
-      const r = Math.PI / 180, dir = [-Math.sin(opts.yaw * r) * Math.cos(opts.pitch * r), Math.cos(opts.yaw * r) * Math.cos(opts.pitch * r), Math.sin(opts.pitch * r)];
-      toScreen([cur.pos[0] + dir[0] * 3, cur.pos[1] + dir[1] * 3, cur.pos[2] + dir[2] * 3], s);
+    if (pinMark && pinWorld) {
+      toScreen(pinWorld, s);
       pinMark.style.display = s.z > 0.3 ? '' : 'none'; pinMark.style.left = s.x + 'px'; pinMark.style.top = s.y + 'px';
     }
   };
