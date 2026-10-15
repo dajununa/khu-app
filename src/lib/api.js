@@ -14,12 +14,14 @@ const local = {
   create: (body) => fetch('/api/reports', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).then(j),
   setStatus: (id, status, pin) => fetch('/api/reports/' + id, { method: 'PATCH', headers: { 'Content-Type': 'application/json', 'x-admin-pin': pin }, body: JSON.stringify({ status }) }).then(j),
   remove: (id, pin) => fetch('/api/reports/' + id, { method: 'DELETE', headers: { 'x-admin-pin': pin } }).then(j),
+  setAfterPhoto: (id, afterPhoto, pin) => fetch('/api/reports/' + id, { method: 'PATCH', headers: { 'Content-Type': 'application/json', 'x-admin-pin': pin }, body: JSON.stringify({ afterPhoto }) }).then(j),
+  like: (id, delta) => fetch(`/api/reports/${id}/like`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ delta }) }).then(j),
 };
 
 // ---- Supabase ----
 // 새 publishable 키(sb_...)는 JWT가 아니므로 apikey 헤더만 보낸다
 const H = (extra = {}) => ({ apikey: KEY, ...(KEY.startsWith('sb_') ? {} : { Authorization: 'Bearer ' + KEY }), ...extra });
-const fromRow = r => ({ id: r.id, kind: r.kind, category: r.category, lostFound: r.lost_found, detail: r.detail, locationLabel: r.location_label, pin: r.pin, photo: r.photo, shot: r.shot, status: r.status, createdAt: r.created_at });
+const fromRow = r => ({ id: r.id, kind: r.kind, category: r.category, lostFound: r.lost_found, detail: r.detail, locationLabel: r.location_label, pin: r.pin, photo: r.photo, shot: r.shot, afterPhoto: r.after_photo, likes: r.likes || 0, status: r.status, createdAt: r.created_at });
 async function upload(dataUrl) {
   if (!dataUrl) return null;
   const blob = await (await fetch(dataUrl)).blob();
@@ -39,6 +41,16 @@ const remote = {
   async setStatus(id, status, pin) {
     await fetch(`${SB}/rest/v1/rpc/set_status`, { method: 'POST', headers: H({ 'Content-Type': 'application/json' }), body: JSON.stringify({ rid: id, new_status: status, pin_in: pin }) }).then(async r => { if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error(/PIN/.test(e.message || '') ? 'PIN이 올바르지 않습니다.' : '변경에 실패했습니다.'); } });
     return { status };
+  },
+  async setAfterPhoto(id, dataUrl, pin) {
+    const url = await upload(dataUrl);
+    const r = await fetch(`${SB}/rest/v1/rpc/set_after_photo`, { method: 'POST', headers: H({ 'Content-Type': 'application/json' }), body: JSON.stringify({ rid: id, url, pin_in: pin }) });
+    if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error(/PIN/.test(e.message || '') ? 'PIN이 올바르지 않습니다.' : '저장에 실패했습니다.'); }
+    return { afterPhoto: url };
+  },
+  async like(id, delta) {
+    const r = await fetch(`${SB}/rest/v1/rpc/like_report`, { method: 'POST', headers: H({ 'Content-Type': 'application/json' }), body: JSON.stringify({ rid: id, delta }) });
+    return { likes: await j(r) };
   },
   async remove(id, pin) {
     const r = await fetch(`${SB}/rest/v1/rpc/delete_report`, { method: 'POST', headers: H({ 'Content-Type': 'application/json' }), body: JSON.stringify({ rid: id, pin_in: pin }) });

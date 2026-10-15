@@ -1,5 +1,5 @@
 import './style.css';
-import { home } from './screens/home.js';
+import { home, choose } from './screens/home.js';
 import { plan } from './screens/plan.js';
 import { board } from './screens/board.js';
 import { report } from './screens/report.js';
@@ -29,7 +29,7 @@ async function route() {
     const c = await openTour(tourHost, opts, {
       onClose: () => (history.length > 1 ? history.back() : (location.hash = '#/')),
       onPin: ({ pin, shot, label }) => {
-        resetDraft(); Object.assign(draft, { pin, shot, label });
+        const kind = draft.kind; resetDraft(); Object.assign(draft, { kind, pin, shot, label });
         nav.tour = { ...opts, waypointId: pin.waypoint, yaw: pin.yaw, pitch: pin.pitch }; // 뒤로 오면 핀한 자리에서 다시 시작
         location.hash = '#/report';
       },
@@ -43,7 +43,8 @@ async function route() {
   else if (name === 'report') { setTab(null); el = report(); }
   else if (name === 'stairs') { setTab('home'); el = await stairs(arg); }
   else if (name === 'floor') { setTab('home'); el = await plan(arg); }
-  else { setTab('home'); el = home(); }
+  else if (name === 'building') { setTab('home'); el = home(); }
+  else { setTab('home'); el = choose(); }
   if (my !== token) return;
   cleanup = el._cleanup || null;
   screen.replaceChildren(el);

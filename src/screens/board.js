@@ -1,10 +1,13 @@
-import { h, toast, ago, fullTime } from '../lib/dom.js';
+import { h, toast, ago, fullTime, shrinkImage } from '../lib/dom.js';
 import { api } from '../lib/api.js';
 import { STATUSES } from '../data/config.js';
 import { goTour, nav } from '../lib/state.js';
 
 const sIdx = s => STATUSES.indexOf(s);
 const tagText = r => (r.kind === '분실물' ? `${r.lostFound || '분실물'} · ${r.category || '기타'}` : (r.category || r.kind));
+const likedSet = () => { try { return JSON.parse(localStorage.getItem('khu_liked') || '[]'); } catch { return []; } };
+const liked = id => likedSet().includes(id);
+const setLiked = (id, on) => { try { localStorage.setItem('khu_liked', JSON.stringify(on ? [...new Set([...likedSet(), id])] : likedSet().filter(x => x !== id))); } catch {} };
 const badge = s => h('span', { class: `badge s-${sIdx(s)}` }, s);
 
 export function board() {
@@ -27,11 +30,12 @@ export function board() {
     list.replaceChildren(...(shown.length ? shown.map(card) : [h('div', { class: 'empty' }, h('b', {}, '접수된 내용이 없어요'), '홈에서 층을 골라 첫 신고를 남겨 보세요.')]));
   }
   function card(r) {
-    const img = r.photo || r.shot;
+    const img = r.shot || r.photo;
     const el = h('button', { class: `item ${nav.justAdded === r.id ? 'new' : ''}`, onClick: () => openSheet(r) },
       img ? h('img', { class: 'th', src: img, alt: '', loading: 'lazy' }) : h('div', { class: 'th none' }, '사진 없음'),
       h('div', { class: 'body' },
         h('div', { class: 'row' }, h('span', { class: 'kind' }, tagText(r)), badge(r.status), h('span', { class: 'dt' }, ago(r.createdAt))),
+        r.likes ? h('div', { class: 'lk' }, `♥ ${r.likes}`) : null,
         h('div', { class: 'loc1' }, r.locationLabel || '위치 정보 없음'),
         r.detail ? h('div', { class: 'tx' }, r.detail) : null));
     return el;
@@ -43,11 +47,25 @@ export function board() {
     const paint = () => {
       sheet.replaceChildren(
         h('div', { class: 'grab' }),
-        h('div', { class: 'row', style: 'display:flex;gap:6px;align-items:center;flex-wrap:wrap' }, h('span', { class: 'kind' }, tagText(r)), badge(r.status), h('span', { class: 'dt', style: 'margin-left:auto;color:var(--muted);font-size:12px' }, fullTime(r.createdAt))),
+        h('div', { class: 'row', style: 'display:flex;gap:6px;align-items:center;flex-wrap:wrap' }, h('span', { class: 'kind' }, tagText(r)), badge(r.status), ),
+        h('div', { class: 'meta' }, h('span', {}, `${fullTime(r.createdAt)} 신고`),
+          h('button', { class: `like ${liked(r.id) ? 'on' : ''}`, onClick: async () => {
+            const on = !liked(r.id), d = on ? 1 : -1;
+            setLiked(r.id, on); r.likes = Math.max(0, (r.likes || 0) + d); paint(); draw();
+            try { const u = await api.like(r.id, d); r.likes = u.likes; } catch { setLiked(r.id, !on); r.likes = Math.max(0, r.likes - d); toast('공감에 실패했어요.'); }
+            paint(); draw(); } }, `${liked(r.id) ? '♥' : '♡'} 공감 ${r.likes || 0}`)),
         h('h2', { style: 'font-size:18px;margin-top:8px' }, r.locationLabel || '위치 정보 없음'),
         h('div', { class: 'steps' }, STATUSES.map((s, i) => h('div', { class: i <= sIdx(r.status) ? 'on' : '' }, s))),
         r.detail ? h('p', {}, r.detail) : h('p', { style: 'color:var(--muted)' }, '추가 설명 없음'),
-        h('div', { class: 'imgs' }, r.photo ? h('figure', {}, h('img', { src: r.photo, alt: '신고 사진' }), h('figcaption', {}, '현장 사진')) : null, r.shot ? h('figure', {}, h('img', { src: r.shot, alt: '3D 화면' }), h('figcaption', {}, '핀한 3D 화면')) : null),
+        h('div', { class: 'ba' },
+          h('figure', {}, r.shot || r.photo ? h('img', { src: r.shot || r.photo, alt: '처리 전' }) : h('div', { class: 'ph' }, '사진 없음'), h('figcaption', {}, '처리 전')),
+          h('figure', {}, r.afterPhoto ? h('img', { src: r.afterPhoto, alt: '처리 후' }) : h('div', { class: 'ph dash' }, r.status === '완료' ? '처리 후 사진 준비 중' : '완료되면 처리 후 사진이 올라와요'), h('figcaption', {}, '처리 후'))),
+        admin() ? h('label', { class: 'btn block ghost', style: 'margin:0 0 12px;text-align:center;display:block;line-height:20px' }, r.afterPhoto ? '처리 후 사진 바꾸기 (관리자)' : '처리 후 사진 올리기 (관리자)',
+          h('input', { type: 'file', accept: 'image/*', style: 'display:none', onChange: async e => {
+            const f = e.target.files[0]; if (!f) return;
+            try { const u = await api.setAfterPhoto(r.id, await shrinkImage(f), admin()); Object.assign(r, u); paint(); draw(); toast('처리 후 사진을 올렸어요.'); }
+            catch (err) { toast(err.message); if (/PIN/.test(err.message)) sessionStorage.removeItem('khu_pin'), paint(); } } })) : null,
+        h('div', { class: 'imgs' }, r.photo && r.shot ? h('figure', {}, h('img', { src: r.photo, alt: '신고 사진' }), h('figcaption', {}, '현장 사진')) : null, null),
         r.pin?.waypoint ? h('button', { class: 'btn block ghost', onClick: () => { bg.remove(); goTour({ scene: r.pin.scene, floor: r.pin.floor, waypointId: r.pin.waypoint, yaw: r.pin.yaw, pitch: r.pin.pitch, mode: 'view' }); } }, '📍 3D로 위치 보기') : null,
         admin()
           ? h('div', { class: 'admin' }, h('span', { class: 'lbl' }, '처리 상태 변경 (관리자)'), h('div', { class: 'seg' }, STATUSES.map(s => h('button', { class: s === r.status ? 'on' : '', onClick: async () => {

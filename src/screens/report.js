@@ -7,10 +7,9 @@ export function report() {
   if (!draft.pin) { location.hash = '#/'; return h('div'); }
   const root = h('div', {});
   const back = h('button', { class: 'iconbtn', 'aria-label': '뒤로', onClick: () => history.back() }, h('svg', { viewBox: '0 0 24 24' }, h('path', { d: 'M15 5l-7 7 7 7' })));
-  root.append(h('div', { class: 'topbar' }, back, h('h1', {}, '신고하기')));
+  root.append(h('div', { class: 'topbar' }, back, h('h1', {}, `${draft.kind} 신고`)));
 
-  // 하자 / 분실물 -> 항목(한 단어) 선택
-  const kindBtns = ['하자', '분실물'].map(k => h('button', { type: 'button', class: draft.kind === k ? 'on' : '', onClick: () => { draft.kind = k; draft.category = ''; kindBtns.forEach(b => b.classList.toggle('on', b.textContent === k)); drawCats(); } }, k));
+  // 항목(한 단어) 선택. 하자/분실물은 첫 화면에서 이미 골랐다
   const catsEl = h('div', { class: 'cats', role: 'radiogroup', 'aria-label': '항목 선택' });
   const lfSeg = h('div', { class: 'seg' }, ...['분실', '습득'].map(v => h('button', { type: 'button', class: draft.lostFound === v ? 'on' : '', onClick: () => { draft.lostFound = v; [...lfSeg.children].forEach(b => b.classList.toggle('on', b.dataset.v === v)); } , 'data-v': v }, v === '분실' ? '잃어버렸어요' : '주웠어요')));
   const lfWrap = h('div', {}, h('span', { class: 'lbl' }, '어떤 상황인가요?'), lfSeg);
@@ -45,7 +44,6 @@ export function report() {
   });
 
   root.append(h('div', { class: 'form' },
-    h('div', { class: 'seg' }, ...kindBtns),
     h('div', { class: 'card' }, h('span', { class: 'lbl' }, '핀한 위치'),
       h('div', { class: 'loc' }, draft.shot ? h('img', { src: draft.shot, alt: '핀한 3D 화면' }) : null,
         h('div', {}, h('b', {}, draft.label), h('small', {}, '3D 스캔에서 핀한 곳'), h('br'), h('button', { class: 'linkbtn', type: 'button', onClick: () => history.back() }, '위치 다시 정하기')))),

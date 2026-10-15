@@ -1,4 +1,5 @@
 import { h } from '../lib/dom.js';
+import { draft } from '../lib/state.js';
 import { FLOORS, SCANNED, STAIR_PAIRS, STAIR_SCANNED, stairName } from '../data/config.js';
 
 // 도움말: 새 화면이 아니라 홈 위에 작은 창으로 뜬다
@@ -22,6 +23,18 @@ function openHelp() {
 }
 
 // 건물 입면(단면) 일러스트. 층을 누르면 평면도로 이동.
+// 첫 단계: 하자 / 분실물 중 무엇을 신고할지 고른다
+export function choose() {
+  const pick = kind => { draft.kind = kind; draft.category = ''; location.hash = '#/building'; };
+  const big = (kind, icon, desc) => h('button', { class: 'bigchoice', type: 'button', onClick: () => pick(kind) },
+    h('span', { class: 'ic' }, icon), h('b', {}, `${kind} 신고`), h('small', {}, desc));
+  return h('div', { class: 'choose' },
+    h('div', { class: 'home-head' },
+      h('div', { class: 'kickrow' }, h('div', { class: 'kicker' }, '경희대학교 · 생활과학대학'), h('button', { class: 'helpbtn', type: 'button', 'aria-haspopup': 'dialog', onClick: openHelp }, h('span', { class: 'q' }, '?'), '도움말')),
+      h('h1', {}, '무엇을 신고할까요?')),
+    h('div', { class: 'choices' }, big('하자', '🛠️', '누수·조명·파손 등 건물 고장'), big('분실물', '🎒', '잃어버렸거나 주운 물건')));
+}
+
 export function home() {
   const X = 22, W = 264, FH = 62, TOP = 62, GROUND = TOP + FH * 5;
   const floors = FLOORS.map((f, i) => {
@@ -71,8 +84,8 @@ export function home() {
   return h('div', { class: 'home' },
     h('div', { class: 'home-head' },
       h('div', { class: 'kickrow' }, h('div', { class: 'kicker' }, '경희대학교 · 생활과학대학'), h('button', { class: 'helpbtn', type: 'button', 'aria-haspopup': 'dialog', onClick: openHelp }, h('span', { class: 'q' }, '?'), '도움말')),
-      h('h1', {}, '건물 하자·분실물 신고'),
-      h('p', { class: 'lead' }, '건물 안 고장·분실물을 3D 스캔에서 위치를 찍어 신고해요. ', h('b', {}, '아래에서 층을 눌러 주세요.'))),
+      h('h1', {}, `${draft.kind} 신고`),
+      h('p', { class: 'lead' }, `${draft.kind} 신고 · 3D 스캔에서 위치를 찍어 신고해요. `, h('b', {}, '아래에서 층을 눌러 주세요.'))),
     svg,
     h('div', { class: 'legend' }, h('span', {}, '● 표시가 있는 층은 3D 스캔으로 신고할 수 있어요')),
   );

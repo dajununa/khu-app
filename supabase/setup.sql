@@ -58,3 +58,23 @@ alter table public.reports add column if not exists category text not null defau
 alter table public.reports add column if not exists lost_found text check (lost_found in ('분실','습득'));
 alter table public.reports drop constraint if exists reports_detail_check;
 alter table public.reports add constraint reports_detail_check check (char_length(detail) <= 1000);
+
+-- 처리 후 사진 + 공감 (이 부분만 따로 실행해도 됩니다)
+alter table public.reports add column if not exists after_photo text;
+alter table public.reports add column if not exists likes integer not null default 0;
+
+create or replace function public.set_after_photo(rid uuid, url text, pin_in text)
+returns void language plpgsql security definer set search_path = public as $$
+begin
+  if pin_in is distinct from (select pin from public.admin_secret limit 1) then
+    raise exception 'PIN이 올바르지 않습니다.';
+  end if;
+  update public.reports set after_photo = url where id = rid;
+end $$;
+grant execute on function public.set_after_photo(uuid, text, text) to anon;
+
+create or replace function public.like_report(rid uuid, delta int)
+returns integer language sql security definer set search_path = public as $$
+  update public.reports set likes = greatest(0, likes + (case when delta < 0 then -1 else 1 end)) where id = rid returning likes;
+$$;
+grant execute on function public.like_report(uuid, int) to anon;

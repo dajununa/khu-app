@@ -71,23 +71,37 @@ export function reportsApi() {
           kind, category, lostFound: ['분실', '습득'].includes(b.lostFound) ? b.lostFound : null, detail,
           locationLabel: str(b.locationLabel, 80),
           pin: { scene: str(w.scene, 40), floor: str(w.floor, 8), waypoint: str(w.waypoint, 60), yaw: +w.yaw || 0, pitch: +w.pitch || 0 },
-          photo: saveImage(b.photo), shot: saveImage(b.shot),
+          photo: saveImage(b.photo), shot: saveImage(b.shot), afterPhoto: null, likes: 0,
           status: '미확인', createdAt: new Date().toISOString(),
         };
         rows.push(row); save(rows); return send(res, 201, row);
+      }
+      if (req.method === 'POST' && id && url.pathname.endsWith('/like')) {
+        const b = await readBody(req); const r = rows.find(x => x.id === id);
+        if (!r) return send(res, 404, { error: 'not found' });
+        r.likes = Math.max(0, (r.likes || 0) + (b.delta === -1 ? -1 : 1)); save(rows); return send(res, 200, { likes: r.likes });
       }
       if (req.method === 'PATCH' && id) {
         if (req.headers['x-admin-pin'] !== ADMIN_PIN) return send(res, 403, { error: 'PIN이 올바르지 않습니다.' });
         const b = await readBody(req); const r = rows.find(x => x.id === id);
         if (!r) return send(res, 404, { error: 'not found' });
-        if (!STATUSES.includes(b.status)) return send(res, 400, { error: '상태가 올바르지 않습니다.' });
-        r.status = b.status; save(rows); return send(res, 200, r);
+        if (b.afterPhoto) {
+          const u = saveImage(b.afterPhoto);
+          if (!u) return send(res, 400, { error: '사진을 저장할 수 없습니다.' });
+          if (r.afterPhoto) fs.rmSync(path.join(UPLOADS, path.basename(r.afterPhoto)), { force: true });
+          r.afterPhoto = u;
+        }
+        if (b.status !== undefined) {
+          if (!STATUSES.includes(b.status)) return send(res, 400, { error: '상태가 올바르지 않습니다.' });
+          r.status = b.status;
+        }
+        save(rows); return send(res, 200, r);
       }
       if (req.method === 'DELETE' && id) {
         if (req.headers['x-admin-pin'] !== ADMIN_PIN) return send(res, 403, { error: 'PIN이 올바르지 않습니다.' });
         const r = rows.find(x => x.id === id);
         if (!r) return send(res, 404, { error: 'not found' });
-        for (const u of [r.photo, r.shot]) if (u) fs.rmSync(path.join(UPLOADS, path.basename(u)), { force: true });
+        for (const u of [r.photo, r.shot, r.afterPhoto]) if (u) fs.rmSync(path.join(UPLOADS, path.basename(u)), { force: true });
         save(rows.filter(x => x.id !== id)); return send(res, 200, {});
       }
       return send(res, 405, { error: 'method not allowed' });
