@@ -45,13 +45,14 @@ export function home() {
     );
   });
   // 층 사이 계단: 한 층 높이를 꽉 채워 바닥에서 바닥까지 이어지는 하나의 계단(지그재그). 건물 오른쪽 벽에 붙이고, 테두리 없이 색만. 계단 모양만 눌린다.
-  const sw = 36, sx = X + W - sw - 2, n = 6;
+  const sw = 36, sx = X + W - sw - 2, n = 6, outlines = [];
   const stairs = STAIR_PAIRS.map(([lo, hi], j) => {
     const yt = TOP + FH * (j + 1), yb = yt + FH, id = `${lo}-${hi}`, on = STAIR_SCANNED.includes(id);
     const right = (STAIR_PAIRS.length - 1 - j) % 2 === 0;           // 아래 층부터 오른쪽 위 → 왼쪽 위 → … 번갈아 이어진다
     let d = `M ${right ? sx : sx + sw} ${yb}`;
     for (let k = 0; k < n; k++) d += ` v ${-FH / n} h ${(right ? 1 : -1) * sw / n}`;
     d += ` V ${yb} Z`;
+    outlines.push(h('path', { class: 'steps-ol', d }));
     return h('g', { class: `stair ${on ? 'scanned' : ''}`, role: 'button', tabindex: 0, 'aria-label': `${stairName([lo, hi])} 보기`,
       onClick: () => (location.hash = `#/stairs/${id}`), onKeydown: e => e.key === 'Enter' && (location.hash = `#/stairs/${id}`) },
       h('path', { class: 'steps', d }),
@@ -64,6 +65,7 @@ export function home() {
     h('rect', { x: X - 8, y: TOP - 14, width: W + 16, height: 14, fill: '#2b2f3a', rx: 3 }), // 옥상 난간
     ...floors,
     h('line', { x1: 0, x2: 360, y1: GROUND, y2: GROUND, stroke: '#2b2f3a', 'stroke-width': 2.5 }),
+    h('g', { class: 'steps-outline' }, ...outlines),
     ...stairs,
   );
   return h('div', { class: 'home' },
