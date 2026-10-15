@@ -4,6 +4,7 @@ import { STATUSES } from '../data/config.js';
 import { goTour, nav } from '../lib/state.js';
 
 const sIdx = s => STATUSES.indexOf(s);
+const tagText = r => (r.kind === '분실물' ? `${r.lostFound || '분실물'} · ${r.category || '기타'}` : (r.category || r.kind));
 const badge = s => h('span', { class: `badge s-${sIdx(s)}` }, s);
 
 export function board() {
@@ -30,9 +31,9 @@ export function board() {
     const el = h('button', { class: `item ${nav.justAdded === r.id ? 'new' : ''}`, onClick: () => openSheet(r) },
       img ? h('img', { class: 'th', src: img, alt: '', loading: 'lazy' }) : h('div', { class: 'th none' }, '사진 없음'),
       h('div', { class: 'body' },
-        h('div', { class: 'row' }, h('span', { class: 'kind' }, r.kind), badge(r.status), h('span', { class: 'dt' }, ago(r.createdAt))),
+        h('div', { class: 'row' }, h('span', { class: 'kind' }, tagText(r)), badge(r.status), h('span', { class: 'dt' }, ago(r.createdAt))),
         h('div', { class: 'loc1' }, r.locationLabel || '위치 정보 없음'),
-        h('div', { class: 'tx' }, r.detail)));
+        r.detail ? h('div', { class: 'tx' }, r.detail) : null));
     return el;
   }
   function openSheet(r) {
@@ -42,10 +43,10 @@ export function board() {
     const paint = () => {
       sheet.replaceChildren(
         h('div', { class: 'grab' }),
-        h('div', { class: 'row', style: 'display:flex;gap:6px;align-items:center;flex-wrap:wrap' }, h('span', { class: 'kind' }, r.kind), badge(r.status), h('span', { class: 'dt', style: 'margin-left:auto;color:var(--muted);font-size:12px' }, fullTime(r.createdAt))),
+        h('div', { class: 'row', style: 'display:flex;gap:6px;align-items:center;flex-wrap:wrap' }, h('span', { class: 'kind' }, tagText(r)), badge(r.status), h('span', { class: 'dt', style: 'margin-left:auto;color:var(--muted);font-size:12px' }, fullTime(r.createdAt))),
         h('h2', { style: 'font-size:18px;margin-top:8px' }, r.locationLabel || '위치 정보 없음'),
         h('div', { class: 'steps' }, STATUSES.map((s, i) => h('div', { class: i <= sIdx(r.status) ? 'on' : '' }, s))),
-        h('p', {}, r.detail),
+        r.detail ? h('p', {}, r.detail) : h('p', { style: 'color:var(--muted)' }, '추가 설명 없음'),
         h('div', { class: 'imgs' }, r.photo ? h('figure', {}, h('img', { src: r.photo, alt: '신고 사진' }), h('figcaption', {}, '현장 사진')) : null, r.shot ? h('figure', {}, h('img', { src: r.shot, alt: '3D 화면' }), h('figcaption', {}, '핀한 3D 화면')) : null),
         r.pin?.waypoint ? h('button', { class: 'btn block ghost', onClick: () => { bg.remove(); goTour({ scene: r.pin.scene, floor: r.pin.floor, waypointId: r.pin.waypoint, yaw: r.pin.yaw, pitch: r.pin.pitch, mode: 'view' }); } }, '📍 3D로 위치 보기') : null,
         admin()

@@ -52,3 +52,9 @@ begin
   delete from public.reports where id = rid;
 end $$;
 grant execute on function public.delete_report(uuid, text) to anon;
+
+-- 항목 선택 방식 (하자 종류 / 분실물 종류, 분실·습득). 세부 내용은 선택.
+alter table public.reports add column if not exists category text not null default '기타' check (char_length(category) <= 20);
+alter table public.reports add column if not exists lost_found text check (lost_found in ('분실','습득'));
+alter table public.reports drop constraint if exists reports_detail_check;
+alter table public.reports add constraint reports_detail_check check (char_length(detail) <= 1000);

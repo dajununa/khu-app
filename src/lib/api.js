@@ -19,7 +19,7 @@ const local = {
 // ---- Supabase ----
 // 새 publishable 키(sb_...)는 JWT가 아니므로 apikey 헤더만 보낸다
 const H = (extra = {}) => ({ apikey: KEY, ...(KEY.startsWith('sb_') ? {} : { Authorization: 'Bearer ' + KEY }), ...extra });
-const fromRow = r => ({ id: r.id, kind: r.kind, detail: r.detail, locationLabel: r.location_label, pin: r.pin, photo: r.photo, shot: r.shot, status: r.status, createdAt: r.created_at });
+const fromRow = r => ({ id: r.id, kind: r.kind, category: r.category, lostFound: r.lost_found, detail: r.detail, locationLabel: r.location_label, pin: r.pin, photo: r.photo, shot: r.shot, status: r.status, createdAt: r.created_at });
 async function upload(dataUrl) {
   if (!dataUrl) return null;
   const blob = await (await fetch(dataUrl)).blob();
@@ -32,7 +32,7 @@ const remote = {
   list: () => fetch(`${SB}/rest/v1/reports?select=*&order=created_at.desc&limit=300`, { headers: H() }).then(j).then(rows => rows.map(fromRow)),
   async create(b) {
     const [photo, shot] = await Promise.all([upload(b.photo), upload(b.shot)]);
-    const body = { kind: b.kind, detail: b.detail.slice(0, 1000), location_label: (b.locationLabel || '').slice(0, 80), pin: b.pin || {}, photo, shot };
+    const body = { kind: b.kind, category: (b.category || '기타').slice(0, 20), lost_found: b.lostFound || null, detail: (b.detail || '').slice(0, 1000), location_label: (b.locationLabel || '').slice(0, 80), pin: b.pin || {}, photo, shot };
     const rows = await fetch(`${SB}/rest/v1/reports`, { method: 'POST', headers: H({ 'Content-Type': 'application/json', Prefer: 'return=representation' }), body: JSON.stringify(body) }).then(j);
     return fromRow(rows[0]);
   },

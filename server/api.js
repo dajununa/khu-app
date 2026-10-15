@@ -63,11 +63,12 @@ export function reportsApi() {
         const kind = KINDS.includes(b.kind) ? b.kind : null;
         const detail = str(b.detail, 1000).trim();
         if (!kind) return send(res, 400, { error: '유형이 올바르지 않습니다.' });
-        if (!detail) return send(res, 400, { error: '세부 내용을 입력해 주세요.' });
+        const category = str(b.category, 20).trim() || '기타';
+        if (category === '기타' && !detail) return send(res, 400, { error: '기타는 내용을 적어 주세요.' });
         const w = b.pin || {};
         const row = {
           id: crypto.randomBytes(6).toString('hex'),
-          kind, detail,
+          kind, category, lostFound: ['분실', '습득'].includes(b.lostFound) ? b.lostFound : null, detail,
           locationLabel: str(b.locationLabel, 80),
           pin: { scene: str(w.scene, 40), floor: str(w.floor, 8), waypoint: str(w.waypoint, 60), yaw: +w.yaw || 0, pitch: +w.pitch || 0 },
           photo: saveImage(b.photo), shot: saveImage(b.shot),
