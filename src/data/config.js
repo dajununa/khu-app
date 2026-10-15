@@ -24,4 +24,13 @@ export const POINT_LABELS = {
   '1F': { first: '현관', last: '계단' },
   '4F': { first: '계단', last: '복도 끝' },
 };
+// 층별 피난안내도 평면도. enabled:false 로 바꾸면 그 층은 기존(복도 선) 방식으로 즉시 돌아간다.
+// jsons 는 위에서부터 시도하고, 못 불러오면 다음 도면으로, 모두 실패하면 기존(복도 선) 방식으로 넘어간다.
+export const EVAC_PLANS = {
+  '1F': { enabled: true, jsons: ['/plans/f1-evac-portrait.v2.json', '/plans/f1-evac-portrait.json', '/plans/f1-evac.json'] }, // 세로 도면 v2(정렬 재계산) → 옛 세로 도면 → 가로 도면
+  '4F': { enabled: true, jsons: ['/plans/f4-evac.json'] },
+};
 export const STATUSES = ['미확인', '확인', '진행 중', '완료'];
+
+// 행정실 연락처. 비워 두면 강의실 화면에 '행정실 문의' 버튼이 나오지 않는다.
+export const OFFICE = { name: '생활과학대학 행정실', phone: '' };
