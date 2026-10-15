@@ -1,7 +1,7 @@
 import { h, toast } from '../lib/dom.js';
-import { db } from '../lib/db.js';
+import { db, isSample } from '../lib/db.js';
 import { OFFICE, FLOORS } from '../data/config.js';
-import { fill, topbar, floorChips, openSheet, field, input, select, empty, loading } from '../lib/ui.js';
+import { fill, sampleNote, topbar, floorChips, openSheet, field, input, select, empty, loading } from '../lib/ui.js';
 import { loadPlan, planView } from '../lib/floorplan.js';
 import { dateStr, timeStr, dateLabel, dur, HALF_HOURS, roomStatus, busySegments, cancelledSegments, overlaps, toMin, fromMin } from '../lib/timetable.js';
 
@@ -62,7 +62,8 @@ export function rooms() {
         main = h('div', { class: 'room-grid' }, info.map(({ r, d }) => h('a', { class: `room-card ${d.cls}`, href: `#/room/${r.id}` },
           h('b', {}, r.code.match(/^\d/) ? r.code + '호' : r.code), h('span', { class: 'st' }, d.top), h('small', {}, d.sub))));
       }
-      fill(body, 
+      fill(body,
+        sampleNote(),
         timebar,
         floorChips(pick.floor, f => { pick.floor = f; paint(); }, { only: floors }),
         h('div', { class: 'room-sum' }, h('span', {}, `${pick.floor} · 이 시간 자습 가능 `, h('b', {}, `${freeN}곳`)), viewSeg),
@@ -96,7 +97,8 @@ export function roomDetail(id) {
       if (cur < '22:00') rows.push({ start_time: cur, end_time: '22:00', free: true });
       const shift = n => { const [y, m, dd] = date.split('-').map(Number); pick.date = dateStr(new Date(y, m - 1, dd + n)); pick.time ||= time; paint(); };
 
-      fill(body, 
+      fill(body,
+        sampleNote(),
         h('div', { class: `room-hero ${d.cls}` }, h('small', {}, `${dateLabel(date)} ${time} 기준`), h('b', {}, d.top), h('span', {}, d.sub)),
         h('div', { class: 'day-nav' },
           h('button', { class: 'iconbtn', 'aria-label': '전날', onClick: () => shift(-1) }, h('svg', { viewBox: '0 0 24 24' }, h('path', { d: 'M15 5l-7 7 7 7' }))),
@@ -153,6 +155,7 @@ function rentalForm(room, data, date) {
       if (!row.date) return toast('날짜를 골라 주세요.');
       if (row.start_time >= row.end_time) return toast('끝나는 시간이 시작보다 늦어야 해요.');
       if (!row.name || !row.contact) return toast('이름과 연락처를 적어 주세요.');
+      if (isSample()) return toast('지금은 예시 화면이라 신청이 저장되지 않아요.');
       submit.disabled = true; submit.textContent = '신청 중…';
       try { await db.insert('rentals', [row], { auth: false }); close(); toast('신청했어요. 행정실에서 승인하면 연락드려요.'); }
       catch (e) { toast(e.message); submit.disabled = false; submit.textContent = '신청하기'; }

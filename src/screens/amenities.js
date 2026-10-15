@@ -4,7 +4,7 @@ import { FLOORS, SCANNED } from '../data/config.js';
 import { AMENITY_TYPES, amenityType } from '../data/amenities.js';
 import { elevation } from '../lib/elevation.js';
 import { loadPlan, planView, noPlan } from '../lib/floorplan.js';
-import { fill, topbar, floorChips, openSheet, empty, loading } from '../lib/ui.js';
+import { fill, sampleNote, topbar, floorChips, openSheet, empty, loading } from '../lib/ui.js';
 
 const view = { mode: 'floor', cat: null, floorCat: null }; // 화면을 오가도 고른 탭·항목 기억
 const floorName = id => FLOORS.find(f => f.id === id)?.name || id;
@@ -59,7 +59,7 @@ export function amenities() {
         aria: f => `${f.name} 편의시설 보기`,
       });
       const used = AMENITY_TYPES.filter(t => items.some(a => amenityType(a.category) === t));
-      fill(body, tabs, h('p', { class: 'hint' }, '층을 누르면 평면도에서 정확한 위치를 볼 수 있어요.'), svg,
+      fill(body, sampleNote(), tabs, h('p', { class: 'hint' }, '층을 누르면 평면도에서 정확한 위치를 볼 수 있어요.'), svg,
         h('div', { class: 'legend wrap' }, used.map(t => h('span', {}, dot(t), t.id))));
     };
     const byCat = tabs => {
@@ -74,7 +74,7 @@ export function amenities() {
         onFloor: f => { view.floorCat = t.id; location.hash = `#/amen-floor/${f.id}`; },
         aria: f => `${f.name} ${t.id} 위치 보기`,
       });
-      fill(body, tabs,
+      fill(body, sampleNote(), tabs,
         h('div', { class: 'cat-grid' }, used.map(c => h('button', { class: `cat ${c.id === t.id ? 'on' : ''}`, style: c.id === t.id ? `background:${c.color};border-color:${c.color}` : '', onClick: () => { view.cat = c.id; paint(); } }, dot(c), h('span', {}, c.id)))),
         svg,
         h('div', { class: 'am-list' }, h('span', { class: 'lbl' }, `${t.id} · 건물 전체 ${sel.length}곳`),
@@ -110,7 +110,7 @@ export function amenityFloor(floorId) {
         shown.length ? shown.map(a => { const t = amenityType(a.category); return h('button', { class: 'am-item', onClick: () => amenitySheet(a) },
           dot(t), h('div', {}, h('b', {}, title(a)), h('small', {}, a.location || (a.x != null ? '평면도에 표시됨' : ' '))), h('svg', { class: 'hub-go', viewBox: '0 0 24 24' }, h('path', { d: 'M9 6l6 6-6 6' }))); })
           : h('div', { class: 'empty', style: 'padding:24px' }, '이 층에 등록된 편의시설이 없어요.'));
-      fill(body, floorChips(floorId, f => (location.hash = `#/amen-floor/${f}`)), cats, map, list);
+      fill(body, sampleNote(), floorChips(floorId, f => (location.hash = `#/amen-floor/${f}`)), cats, map, list);
     };
     paint();
   }).catch(e => fill(body, empty('불러오지 못했어요', e.message)));
