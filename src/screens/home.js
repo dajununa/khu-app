@@ -44,12 +44,12 @@ export function home() {
       h('text', { class: `tag ${scanned ? '' : 'off'}`, x: X + 14, y: y + 44 }, scanned ? '● 3D 스캔' : '준비 중'),
     );
   });
-  // 층 사이 계단: 건물 오른쪽 끝(벽)에 붙여서, 테두리 없이 계단 모양만 색으로 칠한다. 계단 모양만 눌린다.
-  const sw = 34, sh = 56, sx = X + W - sw - 2;
+  // 층 사이 계단: 건물 오른쪽 끝에 붙여, 층 경계마다 같은 방향으로 오르는 깔끔한 계단 모양 하나씩. 테두리 없이 색만, 계단 모양만 눌린다.
+  const sw = 30, sh = 48, sx = X + W - sw - 2, n = 4;
   const stairs = STAIR_PAIRS.map(([lo, hi], i) => {
-    const yb = TOP + FH * (i + 1), y0 = yb - sh / 2, id = `${lo}-${hi}`, on = STAIR_SCANNED.includes(id), n = 5, dir = i % 2 ? -1 : 1;
-    let d = dir > 0 ? `M ${sx} ${y0 + sh}` : `M ${sx + sw} ${y0 + sh}`;
-    for (let k = 0; k < n; k++) d += ` v ${-sh / n} h ${dir * sw / n}`;
+    const yb = TOP + FH * (i + 1), y0 = yb - sh / 2, id = `${lo}-${hi}`, on = STAIR_SCANNED.includes(id);
+    let d = `M ${sx} ${y0 + sh}`;                                  // 왼쪽 아래에서 시작해 오른쪽 위로 한 칸씩 오른다
+    for (let k = 0; k < n; k++) d += ` v ${-sh / n} h ${sw / n}`;
     d += ` V ${y0 + sh} Z`;
     const ly = yb === GROUND ? yb + 19 : yb - 1;
     return h('g', { class: `stair ${on ? 'scanned' : ''}`, role: 'button', tabindex: 0, 'aria-label': `${stairName([lo, hi])} 보기`,
