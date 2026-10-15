@@ -33,8 +33,15 @@ export function home() {
     h('text', { x: 180, y: GROUND + FH + 30, 'text-anchor': 'middle', fill: '#8a8d97', 'font-size': 11 }, '단면 일러스트'),
   );
   return h('div', {},
-    h('div', { class: 'home-head' }, h('div', { class: 'kicker' }, '경희대학교'), h('h1', {}, '생활과학대학 시설 신고')),
-    h('p', { class: 'hint', style: 'margin-top:6px' }, '신고할 층을 눌러 주세요. 하자·분실물을 3D 스캔 위에서 바로 가리킬 수 있어요.'),
+    h('div', { class: 'home-head' },
+      h('div', { class: 'kicker' }, '경희대학교 · 생활과학대학'),
+      h('h1', {}, '건물 하자·분실물 신고'),
+      h('p', { class: 'lead' }, '건물 안에서 고장 난 곳을 발견했거나 물건을 잃어버렸나요? 3D 스캔 화면에서 위치를 직접 찍어 신고할 수 있어요.'),
+      h('ol', { class: 'guide', 'aria-label': '이용 방법' },
+        h('li', {}, h('b', {}, '1'), '아래 건물에서 ', h('em', {}, '층 선택')),
+        h('li', {}, h('b', {}, '2'), '평면도를 눌러 ', h('em', {}, '3D로 이동 후 핀하기')),
+        h('li', {}, h('b', {}, '3'), '항목을 고르고 ', h('em', {}, '신고 접수')))),
+    h('p', { class: 'hint tap-hint' }, '👇 신고할 층을 눌러 주세요'),
     svg,
     h('div', { class: 'legend' }, h('span', {}, h('i', { style: 'background:#f3e3d4' }), '3D 스캔 있음'), h('span', {}, h('i', { style: 'background:#ece7da' }), '준비 중')),
   );
