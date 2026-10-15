@@ -62,7 +62,7 @@ export function board() {
       h('div', { class: 'body' },
         h('div', { class: 'row' }, h('span', { class: 'kind' }, tagText(r)), badge(r.status), h('span', { class: 'dt' }, ago(r.createdAt))),
         r.likes ? h('div', { class: 'lk' }, `♥ ${r.likes}`) : null,
-        h('div', { class: 'loc1' }, r.locationLabel || '위치 정보 없음'),
+        sessionStorage.getItem('khu_pin') ? h('div', { class: 'loc1' }, r.locationLabel || '위치 정보 없음') : null,
         r.detail ? h('div', { class: 'tx' }, r.detail) : null));
     return el;
   }
@@ -80,7 +80,7 @@ export function board() {
             setLiked(r.id, on); r.likes = Math.max(0, (r.likes || 0) + d); paint(); draw();
             try { const u = await api.like(r.id, d); r.likes = u.likes; } catch { setLiked(r.id, !on); r.likes = Math.max(0, r.likes - d); toast('공감에 실패했어요.'); }
             paint(); draw(); } }, `${liked(r.id) ? '♥' : '♡'} 공감 ${r.likes || 0}`)),
-        h('h2', { style: 'font-size:18px;margin-top:8px' }, r.locationLabel || '위치 정보 없음'),
+        admin() ? h('h2', { style: 'font-size:18px;margin-top:8px' }, r.locationLabel || '위치 정보 없음') : null,
         h('div', { class: 'steps' }, STATUSES.map((s, i) => h('div', { class: i <= sIdx(r.status) ? 'on' : '' }, s))),
         r.detail ? h('p', {}, r.detail) : null,
         h('div', { class: 'ba' },
@@ -92,7 +92,7 @@ export function board() {
             try { const u = await api.setAfterPhoto(r.id, await shrinkImage(f), admin()); Object.assign(r, u); paint(); draw(); toast('처리 후 사진을 올렸어요.'); }
             catch (err) { toast(err.message); if (/PIN/.test(err.message)) sessionStorage.removeItem('khu_pin'), paint(); } } })) : null,
         h('div', { class: 'imgs' }, r.photo && r.shot ? h('figure', {}, h('img', { src: r.photo, alt: '신고 사진' }), h('figcaption', {}, '현장 사진')) : null, null),
-        r.pin?.waypoint ? h('button', { class: 'btn block ghost', onClick: () => { bg.remove(); goTour({ scene: r.pin.scene, floor: r.pin.floor, waypointId: r.pin.waypoint, yaw: r.pin.yaw, pitch: r.pin.pitch, mode: 'view' }); } }, '📍 3D로 위치 보기') : null,
+        admin() && r.pin?.waypoint ? h('button', { class: 'btn block ghost', onClick: () => { bg.remove(); goTour({ scene: r.pin.scene, floor: r.pin.floor, waypointId: r.pin.waypoint, yaw: r.pin.yaw, pitch: r.pin.pitch, mode: 'view' }); } }, '📍 3D로 위치 보기') : null,
         admin()
           ? h('div', { class: 'admin' }, h('span', { class: 'lbl' }, '처리 상태 변경 (관리자)'), h('div', { class: 'seg' }, STATUSES.map(s => h('button', { class: s === r.status ? 'on' : '', onClick: async () => {
               try { const u = await api.setStatus(r.id, s, admin()); Object.assign(r, u); paint(); draw(); } catch (e) { toast(e.message); if (/PIN/.test(e.message)) sessionStorage.removeItem('khu_pin'), paint(); } } }, s))),
@@ -100,7 +100,7 @@ export function board() {
                 if (!confirm('이 신고를 삭제할까요? 되돌릴 수 없어요.')) return;
                 try { await api.remove(r.id, admin()); rows = rows.filter(x => x.id !== r.id); bg.remove(); draw(); toast('삭제했어요.'); }
                 catch (e) { toast(e.message); if (/PIN/.test(e.message)) sessionStorage.removeItem('khu_pin'), paint(); } } }, '🗑 이 글 삭제'))
-          : h('button', { class: 'linkbtn', onClick: () => { const p = prompt('관리자 PIN을 입력하세요'); if (p) { sessionStorage.setItem('khu_pin', p); paint(); } } }, '관리자')].filter(Boolean));
+          : h('button', { class: 'linkbtn', onClick: () => { const p = prompt('관리자 PIN을 입력하세요'); if (p) { sessionStorage.setItem('khu_pin', p); paint(); draw(); } } }, '관리자')].filter(Boolean));
     };
     paint(); bg.append(sheet); document.getElementById('app').append(bg);
   }
