@@ -4,7 +4,7 @@ import { STATUSES, CATEGORIES } from '../data/config.js';
 import { goTour, nav } from '../lib/state.js';
 
 const sIdx = s => STATUSES.indexOf(s);
-const tagText = r => (r.kind === '분실물' ? `${r.lostFound || '분실물'} · ${r.category || '기타'}` : (r.category || r.kind));
+const tagText = r => (r.kind === '분실물' ? `${r.lostFound || '분실물'} · ${r.category || '기타'}${r.pin?.found === 'office' ? ' · 행정실 보관' : r.pin?.found === 'left' ? ' · 그 자리' : ''}` : (r.category || r.kind));
 const likedSet = () => { try { return JSON.parse(localStorage.getItem('khu_liked') || '[]'); } catch { return []; } };
 const liked = id => likedSet().includes(id);
 const setLiked = (id, on) => { try { localStorage.setItem('khu_liked', JSON.stringify(on ? [...new Set([...likedSet(), id])] : likedSet().filter(x => x !== id))); } catch {} };

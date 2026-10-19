@@ -80,7 +80,7 @@ export function reportsApi() {
           id: crypto.randomBytes(6).toString('hex'),
           kind, category, lostFound: ['분실', '습득'].includes(b.lostFound) ? b.lostFound : null, detail,
           locationLabel: str(b.locationLabel, 80),
-          pin: { scene: str(w.scene, 40), floor: str(w.floor, 8), waypoint: str(w.waypoint, 60), yaw: +w.yaw || 0, pitch: +w.pitch || 0 },
+          pin: { scene: str(w.scene, 40), floor: str(w.floor, 8), waypoint: str(w.waypoint, 60), yaw: +w.yaw || 0, pitch: +w.pitch || 0, ...(['all', 'floor'].includes(w.scope) ? { scope: w.scope } : {}), ...(['left', 'office'].includes(w.found) ? { found: w.found } : {}) }, // 위치 범위(scope): 없으면 3D 핀. found: 습득 물건 처리
           photo: saveImage(b.photo), shot: saveImage(b.shot), afterPhoto: null, likes: 0,
           status: '미확인', createdAt: new Date().toISOString(),
         };

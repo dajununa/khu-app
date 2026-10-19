@@ -286,3 +286,12 @@ textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
 .near .nitem .btn { margin-top: 8px; width: 100%; }
 
 .pin4 { width: 100%; box-sizing: border-box; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; font-size: 18px; letter-spacing: .4em; background: var(--surface); color: var(--ink); }
+
+/* 분실물 신고: 잃어버렸어요/습득했어요, 잃어버린 위치 선택 */
+.tip { padding: 10px 12px; border-radius: 12px; background: color-mix(in srgb, var(--accent) 10%, var(--surface)); font-size: 13.5px; line-height: 1.5; word-break: keep-all; }
+.opts { display: grid; gap: 10px; padding: 0 16px 24px; }
+.opt { display: grid; gap: 2px; text-align: left; padding: 16px; border: 2px solid var(--line); border-radius: 16px; background: var(--surface); }
+.opt b { font-size: 16px; }
+.opt small { color: var(--muted); font-size: 13px; }
+.opt:active { border-color: var(--accent); }
+.opts .floors { padding: 2px 0; }

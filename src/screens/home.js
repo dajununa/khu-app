@@ -25,7 +25,7 @@ function openHelp() {
 // 건물 입면(단면) 일러스트. 층을 누르면 평면도로 이동.
 // 첫 단계: 하자 / 분실물 중 무엇을 신고할지 고른다
 export function choose() {
-  const pick = kind => { draft.kind = kind; draft.category = ''; location.hash = '#/building'; };
+  const pick = kind => { Object.assign(draft, { kind, category: '', pin: null, shot: null, label: '', foundAction: '', lostFound: '분실' }); location.hash = kind === '분실물' ? '#/lost' : '#/building'; };
   const big = (kind, icon, desc) => h('button', { class: 'bigchoice', type: 'button', onClick: () => pick(kind) },
     h('span', { class: 'ic' }, icon), h('b', {}, `${kind} 신고`), h('small', {}, desc));
   return h('div', { class: 'choose' },
@@ -33,6 +33,31 @@ export function choose() {
       h('div', { class: 'kickrow' }, h('div', { class: 'kicker' }, '경희대학교 · 생활과학대학'), h('button', { class: 'helpbtn', type: 'button', 'aria-haspopup': 'dialog', onClick: openHelp }, h('span', { class: 'q' }, '?'), '도움말')),
       h('h1', {}, '무엇을 신고할까요?')),
     h('div', { class: 'choices' }, big('하자', '🛠️', '누수·조명·파손 등 건물 고장'), big('분실물', '🎒', '잃어버렸거나 주운 물건')));
+}
+
+const backTop = title => h('div', { class: 'topbar' }, h('button', { class: 'iconbtn', 'aria-label': '뒤로', onClick: () => history.back() }, h('svg', { viewBox: '0 0 24 24' }, h('path', { d: 'M15 5l-7 7 7 7' }))), h('h1', {}, title));
+
+// 분실물 신고 첫 단계: 잃어버렸어요 / 습득했어요
+export function lostChoice() {
+  const big = (lf, icon, title, desc) => h('button', { class: 'bigchoice', type: 'button', onClick: () => { draft.lostFound = lf; location.hash = lf === '습득' ? '#/building' : '#/lostwhere'; } },
+    h('span', { class: 'ic' }, icon), h('b', {}, title), h('small', {}, desc));
+  return h('div', { class: 'choose' }, backTop('분실물 신고'),
+    h('p', { class: 'hint' }, '어떤 상황인가요?'),
+    h('div', { class: 'choices' }, big('분실', '🔍', '잃어버렸어요', '물건을 잃어버려서 찾고 있어요'), big('습득', '🤲', '습득했어요', '주인을 찾는 물건을 주웠어요')));
+}
+
+// 잃어버린 위치: 모름(건물 전체) / 층만 / 정확한 위치(3D 핀)
+export function lostWhere() {
+  const done = (pin, label) => { Object.assign(draft, { pin, label, shot: null }); location.hash = '#/report'; };
+  const floorsEl = h('div', { class: 'cats floors', hidden: true }, ...FLOORS.slice().reverse().map(f => h('button', { type: 'button', class: 'cat', onClick: () => done({ scope: 'floor', floor: f.id }, f.name) }, f.name)));
+  const opt = (title, desc, fn) => h('button', { class: 'opt', type: 'button', onClick: fn }, h('b', {}, title), h('small', {}, desc));
+  return h('div', { class: 'choose' }, backTop('잃어버린 위치'),
+    h('p', { class: 'hint' }, '어디서 잃어버렸나요? 아는 만큼만 골라 주세요.'),
+    h('div', { class: 'opts' },
+      opt('잘 모르겠어요', '생활과학대학 건물 전체로 접수돼요', () => done({ scope: 'all' }, '생활과학대학 전체')),
+      opt('층은 알아요', '지하 1층 ~ 5층 중에서 골라요', () => { floorsEl.hidden = !floorsEl.hidden; }),
+      floorsEl,
+      opt('정확한 위치를 알아요', '3D 스캔에서 핀을 찍어요', () => { location.hash = '#/building'; })));
 }
 
 export function home() {
@@ -84,8 +109,8 @@ export function home() {
   return h('div', { class: 'home' },
     h('div', { class: 'home-head' },
       h('div', { class: 'kickrow' }, h('div', { class: 'kicker' }, '경희대학교 · 생활과학대학'), h('button', { class: 'helpbtn', type: 'button', 'aria-haspopup': 'dialog', onClick: openHelp }, h('span', { class: 'q' }, '?'), '도움말')),
-      h('h1', {}, `${draft.kind} 신고`),
-      h('p', { class: 'lead' }, `${draft.kind} 신고 · 3D 스캔에서 위치를 찍어 신고해요. `, h('b', {}, '아래에서 층을 눌러 주세요.'))),
+      h('h1', {}, draft.kind === '분실물' ? (draft.lostFound === '습득' ? '습득 신고' : '분실 신고') : `${draft.kind} 신고`),
+      h('p', { class: 'lead' }, draft.kind === '분실물' ? (draft.lostFound === '습득' ? '습득 신고 · 주운 곳을 3D 스캔에서 찍어 주세요. ' : '분실 신고 · 잃어버린 곳을 3D 스캔에서 찍어 주세요. ') : `${draft.kind} 신고 · 3D 스캔에서 위치를 찍어 신고해요. `, h('b', {}, '아래에서 층을 눌러 주세요.'))),
     svg,
     h('div', { class: 'legend' }, h('span', {}, '● 표시가 있는 층은 3D 스캔으로 신고할 수 있어요')),
   );
