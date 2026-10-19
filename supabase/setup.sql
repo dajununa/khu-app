@@ -119,3 +119,6 @@ begin
   end if;
   delete from public.reports where id = rid;
 end $$;
+
+-- 새 함수를 API 에 바로 인식시킵니다.
+notify pgrst, 'reload schema';

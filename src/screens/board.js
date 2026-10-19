@@ -56,7 +56,7 @@ export function board() {
     list.replaceChildren(...(shown.length ? shown.map(card) : [h('div', { class: 'empty' }, h('b', {}, '접수된 내용이 없어요'), '홈에서 층을 골라 첫 신고를 남겨 보세요.')]));
   }
   function card(r) {
-    const img = r.shot || r.photo;
+    const img = r.photo || r.shot; // 직접 올린 사진이 있으면 그것을 먼저
     const el = h('button', { class: `item ${nav.justAdded === r.id ? 'new' : ''}`, onClick: () => openSheet(r) },
       img ? shotView(r, img, 'th', '') : h('div', { class: 'th none' }, '사진 없음'),
       h('div', { class: 'body' },
