@@ -61,7 +61,7 @@ export function board() {
   function drawChips() {
     tabs.replaceChildren(...['전체', '하자', '분실물'].map(k => h('button', { type: 'button', role: 'tab', class: kind === k ? 'on' : '', 'aria-selected': String(kind === k), onClick: () => { kind = k; reset(); draw(); } }, kindName(k))));
     const act = activeTags();
-    filterBtn.replaceChildren(h('svg', { viewBox: '0 0 24 24' }, h('path', { d: 'M4 6h16M7 12h10M10 18h4' })), '필터', act.length ? h('b', {}, String(act.length)) : null);
+    filterBtn.replaceChildren(...[h('svg', { viewBox: '0 0 24 24' }, h('path', { d: 'M4 6h16M7 12h10M10 18h4' })), '필터', act.length ? h('b', {}, String(act.length)) : null].filter(Boolean));
     tags.hidden = !act.length;
     tags.replaceChildren(...act.map(([name, clear]) => h('button', { type: 'button', class: 'ftag', 'aria-label': `${name} 조건 지우기`, onClick: () => { clear(); draw(); } }, name, h('span', {}, '×'))));
   }
@@ -74,11 +74,11 @@ export function board() {
       h('div', { class: 'fopts' }, ...items.map(([v, name]) => h('button', { type: 'button', class: `fopt ${cur === v ? 'on' : ''}`, onClick: () => { pick(cur === v ? '전체' : v); draw(); paint(); } }, name))));
     const paint = () => {
       const n = rows.filter(match).length;
-      sheet.replaceChildren(h('div', { class: 'grab' }), h('h2', { style: 'font-size:18px;margin:8px 0 14px' }, '필터'),
+      sheet.replaceChildren(...[h('div', { class: 'grab' }), h('h2', { style: 'font-size:18px;margin:8px 0 14px' }, '필터'),
         kind === '분실물' ? group('분실 / 발견', [['분실', '분실'], ['습득', '발견']], lf, v => { lf = v; }) : null,
         kind !== '전체' ? group(kind === '하자' ? '시설 종류' : '물건 종류', catNames().map(c => [c, c]), cat, v => { cat = v; }) : null,
         group('처리 상태', STATUSES.map(st => [st, st]), status, v => { status = v; }),
-        h('div', { class: 'factions' }, h('button', { class: 'btn ghost', type: 'button', onClick: () => { reset(); draw(); paint(); } }, '초기화'), h('button', { class: 'btn', type: 'button', onClick: () => bg.remove() }, `${n}건 보기`)));
+        h('div', { class: 'factions' }, h('button', { class: 'btn ghost', type: 'button', onClick: () => { reset(); draw(); paint(); } }, '초기화'), h('button', { class: 'btn', type: 'button', onClick: () => bg.remove() }, `${n}건 보기`))].filter(Boolean));
     };
     paint(); bg.append(sheet); document.getElementById('app').append(bg);
   }
