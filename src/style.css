@@ -333,3 +333,19 @@ textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
 .fopt { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 8px 14px; font-size: 14px; font-weight: 600; color: var(--muted); }
 .fopt.on { background: var(--ink); color: var(--bg); border-color: var(--ink); }
 .factions { display: grid; grid-template-columns: 1fr 2fr; gap: 10px; margin-top: 6px; }
+
+/* 분실물 접수: 작게 넣는 추가 설명·전화번호 */
+.sm { width: 100%; box-sizing: border-box; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; font-size: 14px; background: var(--surface); color: var(--ink); font-family: inherit; }
+textarea.sm { resize: vertical; min-height: 54px; }
+.lbl.s { font-size: 12px; }
+.smallgrp { display: grid; gap: 12px; }
+.smallgrp textarea { min-height: 54px; font-size: 14px; padding: 8px 10px; }
+.smallgrp .counter { font-size: 11px; }
+.visrow { margin-top: 8px; display: grid; gap: 4px; }
+.visrow[hidden] { display: none; }
+.visrow small { color: var(--muted); font-size: 11.5px; }
+.seg.sm button { padding: 6px 4px; font-size: 13px; border-radius: 8px; }
+
+.phoneline { margin: 6px 0 10px; font-size: 14px; }
+.phoneline a { color: var(--ink); font-weight: 700; }
+.phoneline small { color: var(--muted); font-size: 12px; }

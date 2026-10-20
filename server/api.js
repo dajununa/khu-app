@@ -56,7 +56,8 @@ const readBody = (req) => new Promise((res, rej) => {
 });
 const send = (res, code, obj) => { res.statusCode = code; res.setHeader('Content-Type', 'application/json; charset=utf-8'); res.end(JSON.stringify(obj)); };
 const str = (v, max) => String(v ?? '').slice(0, max);
-const pub = ({ ownerPin, ...r }) => r; // 작성자 PIN 은 응답에 싣지 않는다
+const cleanPhone = v => { const t = String(v ?? '').replace(/[\s]/g, ''); return /^[0-9-]{9,15}$/.test(t) ? t : ''; };
+const pub = ({ ownerPin, phone, ...r }) => (r.phonePublic && phone ? { ...r, phone } : r); // 작성자 PIN, 비공개 전화번호는 응답에 싣지 않는다
 const okAdmin = req => req.headers['x-admin-pin'] === ADMIN_PIN;
 const okOwner = (req, r) => !!r.ownerPin && req.headers['x-owner-pin'] === r.ownerPin;
 const fails = new Map(); // PIN 무작위 대입 방지: IP당 10분에 20번
@@ -81,7 +82,7 @@ export function reportsApi() {
       const id = url.pathname.split('/')[3];
 
       if (req.method === 'GET' && !id) return send(res, 200, rows.slice().reverse().map(pub));
-      if (req.method === 'GET' && id) {
+      if (req.method === 'GET' && id && !url.pathname.endsWith('/phone')) {
         const r = rows.find(x => x.id === id); return r ? send(res, 200, pub(r)) : send(res, 404, { error: 'not found' });
       }
       if (req.method === 'POST' && !id) {
@@ -91,7 +92,11 @@ export function reportsApi() {
         const detail = str(b.detail, 1000).trim();
         if (!kind) return send(res, 400, { error: '유형이 올바르지 않습니다.' });
         const category = str(b.category, 20).trim() || '기타';
-        if (category === '기타' && !detail) return send(res, 400, { error: '기타는 내용을 적어 주세요.' });
+        const itemDesc = kind === '분실물' ? str(b.itemDesc, 200).trim() : '';
+        if (kind === '분실물' && !itemDesc) return send(res, 400, { error: '물품 설명을 적어 주세요.' });
+        if (category === '기타' && !detail && !itemDesc) return send(res, 400, { error: '기타는 내용을 적어 주세요.' });
+        const phone = kind === '분실물' ? cleanPhone(b.phone) : '';
+        if (kind === '분실물' && b.phone && !phone) return send(res, 400, { error: '전화번호 형식이 올바르지 않습니다.' });
         if (!/^\d{4}$/.test(String(b.ownerPin ?? ''))) return send(res, 400, { error: '수정·삭제용 PIN 4자리를 입력해 주세요.' });
         const w = b.pin || {};
         const lostFound = ['분실', '습득'].includes(b.lostFound) ? b.lostFound : null;
@@ -99,13 +104,18 @@ export function reportsApi() {
           ownerPin: String(b.ownerPin),
           code: nextCode(rows, { kind, lostFound }),
           id: crypto.randomBytes(6).toString('hex'),
-          kind, category, lostFound, detail,
+          kind, category, lostFound, detail, itemDesc, phone, phonePublic: !!phone && b.phonePublic === true,
           locationLabel: str(b.locationLabel, 80),
           pin: { scene: str(w.scene, 40), floor: str(w.floor, 8), waypoint: str(w.waypoint, 60), yaw: +w.yaw || 0, pitch: +w.pitch || 0, ...(['all', 'floor'].includes(w.scope) ? { scope: w.scope } : {}), ...(['left', 'office'].includes(w.found) ? { found: w.found } : {}) }, // 위치 범위(scope): 없으면 3D 핀. found: 습득 물건 처리
           photo: saveImage(b.photo), shot: saveImage(b.shot), afterPhoto: null, likes: 0,
           status: '미확인', createdAt: new Date().toISOString(),
         };
         rows.push(row); save(rows); return send(res, 201, pub(row));
+      }
+      if (req.method === 'GET' && id && url.pathname.endsWith('/phone')) { // 관리자만: 공개·비공개 상관없이 전화번호 확인
+        if (!okAdmin(req)) return send(res, 403, { error: 'PIN이 올바르지 않습니다.' });
+        const r = rows.find(x => x.id === id);
+        return r ? send(res, 200, { phone: r.phone || '', phonePublic: !!r.phonePublic }) : send(res, 404, { error: 'not found' });
       }
       if (req.method === 'POST' && id && url.pathname.endsWith('/verify')) {
         const r = rows.find(x => x.id === id);
@@ -126,7 +136,7 @@ export function reportsApi() {
         if (!admin && !owner) { tooManyFails(req.socket.remoteAddress, true); return send(res, 403, { error: 'PIN이 올바르지 않습니다.' }); }
         if (owner) { // 작성자는 항목·세부 내용·사진만 고칠 수 있다 (처리 상태·처리 후 사진은 관리자만)
           const category = str(b.category, 20).trim() || '기타', detail = str(b.detail, 1000).trim();
-          if (category === '기타' && !detail) return send(res, 400, { error: '기타는 내용을 적어 주세요.' });
+          if (category === '기타' && !detail && !r.itemDesc) return send(res, 400, { error: '기타는 내용을 적어 주세요.' });
           r.category = category; r.detail = detail;
           if (r.kind === '분실물') r.lostFound = ['분실', '습득'].includes(b.lostFound) ? b.lostFound : r.lostFound;
           if (b.photo) {

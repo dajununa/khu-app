@@ -34,7 +34,7 @@ const hit = (r, q) => {
   const m = /^([flr])-?0*(\d+)$/i.exec(q.trim());
   if (m) return !!r.code && r.code[0].toLowerCase() === m[1].toLowerCase() && parseInt(r.code.slice(2), 10) === +m[2];
   const nq = norm(q);
-  return !nq || norm(r.code).includes(nq) || norm(r.category).includes(nq) || norm(r.detail).includes(nq);
+  return !nq || norm(r.code).includes(nq) || norm(r.category).includes(nq) || norm(r.itemDesc).includes(nq) || norm(r.detail).includes(nq);
 };
 const badge = s => h('span', { class: `badge s-${sIdx(s)}` }, s);
 
@@ -95,7 +95,7 @@ export function board() {
         h('div', { class: 'row' }, codeTag(r), h('span', { class: 'kind' }, tagText(r)), badge(r.status), h('span', { class: 'dt' }, ago(r.createdAt))),
         r.likes ? h('div', { class: 'lk' }, `♥ ${r.likes}`) : null,
         sessionStorage.getItem('khu_pin') ? h('div', { class: 'loc1' }, r.locationLabel || '위치 정보 없음') : null,
-        r.detail ? h('div', { class: 'tx' }, r.detail) : null));
+        r.itemDesc || r.detail ? h('div', { class: 'tx' }, r.itemDesc || r.detail) : null));
     return el;
   }
   function openSheet(r) {
@@ -104,6 +104,20 @@ export function board() {
     const lost = r.kind === '분실물'; // 분실물은 처리 전 칸에 직접 찍은 사진, 핀한 3D 화면은 아래 칸
     const before = lost ? r.photo || r.shot : r.shot || r.photo;
     const sheet = h('div', { class: 'sheet', role: 'dialog', 'aria-label': '신고 상세' });
+    // 연락처: 작성자가 공개로 정했으면 누구나, 비공개면 관리자(PIN 입력)만 본다
+    let adminPhone;
+    const phoneLine = () => {
+      const adm = admin() ? adminPhone : null;
+      const num = r.phonePublic && r.phone ? r.phone : adm?.phone;
+      if (!num) return null;
+      const note = r.phonePublic ? '공개' : '비공개 · 관리자만 보여요';
+      return h('div', { class: 'phoneline' }, '📞 ', h('a', { href: `tel:${num.replace(/-/g, '')}` }, num), h('small', {}, ` ${note}`));
+    };
+    const loadAdminPhone = async () => {
+      if (!admin() || r.kind !== '분실물' || adminPhone !== undefined) return;
+      adminPhone = null;
+      try { adminPhone = await api.getPhone(r.id, admin()); paint(); } catch { /* PIN이 틀리면 아래 다른 동작이 알려 준다 */ }
+    };
     const paint = () => {
       sheet.replaceChildren(...[
         h('div', { class: 'grab' }),
@@ -116,7 +130,9 @@ export function board() {
             paint(); draw(); } }, `${liked(r.id) ? '♥' : '♡'} 공감 ${r.likes || 0}`)),
         admin() ? h('h2', { style: 'font-size:18px;margin-top:8px' }, r.locationLabel || '위치 정보 없음') : null,
         h('div', { class: 'steps' }, STATUSES.map((s, i) => h('div', { class: i <= sIdx(r.status) ? 'on' : '' }, s))),
-        r.detail ? h('p', {}, r.detail) : null,
+        r.itemDesc ? h('p', { style: 'font-weight:700;margin-bottom:4px' }, r.itemDesc) : null,
+        r.detail ? h('p', { style: r.itemDesc ? 'font-size:14px;color:var(--muted);margin-top:0' : '' }, r.detail) : null,
+        phoneLine(),
         h('div', { class: 'ba' },
           h('figure', {}, before ? shotView(r, before, 'bimg', '처리 전') : h('div', { class: 'ph' }, '사진 없음'), h('figcaption', {}, '처리 전')),
           h('figure', {}, r.afterPhoto ? h('img', { src: r.afterPhoto, alt: '처리 후' }) : h('div', { class: 'ph dash' }, r.status === '완료' ? '처리 후 사진 준비 중' : '완료되면 처리 후 사진이 올라와요'), h('figcaption', {}, '처리 후'))),
@@ -137,9 +153,9 @@ export function board() {
           : h('div', { style: 'display:flex;gap:14px;flex-wrap:wrap' }, h('button', { class: 'linkbtn', onClick: async () => {
               const p = prompt('접수할 때 정한 PIN 4자리를 입력하세요'); if (!p) return;
               try { await api.verifyOwner(r.id, p.trim()); openEdit(r, p.trim(), bg); } catch (e) { toast(e.message); } } }, '✏️ 내 글 수정·삭제'),
-            h('button', { class: 'linkbtn', onClick: () => { const p = prompt('관리자 PIN을 입력하세요'); if (p) { sessionStorage.setItem('khu_pin', p); paint(); draw(); } } }, '관리자'))].filter(Boolean));
+            h('button', { class: 'linkbtn', onClick: () => { const p = prompt('관리자 PIN을 입력하세요'); if (p) { sessionStorage.setItem('khu_pin', p); adminPhone = undefined; paint(); draw(); loadAdminPhone(); } } }, '관리자'))].filter(Boolean));
     };
-    paint(); bg.append(sheet); document.getElementById('app').append(bg);
+    paint(); loadAdminPhone(); bg.append(sheet); document.getElementById('app').append(bg);
   }
   // 작성자 수정 화면 (접수할 때 정한 PIN 으로 확인된 뒤에만 열린다)
   function openEdit(r, pin, bg) {
@@ -162,7 +178,7 @@ export function board() {
     save.addEventListener('click', async () => {
       const detail = ta.value.trim();
       if (!category) { toast('항목을 골라 주세요.'); return; }
-      if (category === '기타' && !detail) { toast('기타는 내용을 적어 주세요.'); ta.focus(); return; }
+      if (category === '기타' && !detail && !r.itemDesc) { toast('기타는 내용을 적어 주세요.'); ta.focus(); return; }
       save.disabled = true;
       try { const u = await api.update(r.id, pin, { category, detail, lostFound: r.kind === '분실물' ? lostFound : null, photo }); Object.assign(r, u); draw(); bg.remove(); toast('수정했어요.'); }
       catch (e) { toast(e.message); save.disabled = false; }

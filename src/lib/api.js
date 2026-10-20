@@ -14,6 +14,7 @@ const local = {
   create: (body) => fetch('/api/reports', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).then(j),
   setStatus: (id, status, pin) => fetch('/api/reports/' + id, { method: 'PATCH', headers: { 'Content-Type': 'application/json', 'x-admin-pin': pin }, body: JSON.stringify({ status }) }).then(j),
   remove: (id, pin, owner) => fetch('/api/reports/' + id, { method: 'DELETE', headers: { [owner ? 'x-owner-pin' : 'x-admin-pin']: pin } }).then(j),
+  getPhone: (id, pin) => fetch(`/api/reports/${id}/phone`, { headers: { 'x-admin-pin': pin } }).then(j),
   verifyOwner: (id, pin) => fetch(`/api/reports/${id}/verify`, { method: 'POST', headers: { 'x-owner-pin': pin } }).then(j),
   update: (id, pin, fields) => fetch('/api/reports/' + id, { method: 'PATCH', headers: { 'Content-Type': 'application/json', 'x-owner-pin': pin }, body: JSON.stringify(fields) }).then(j),
   setAfterPhoto: (id, afterPhoto, pin) => fetch('/api/reports/' + id, { method: 'PATCH', headers: { 'Content-Type': 'application/json', 'x-admin-pin': pin }, body: JSON.stringify({ afterPhoto }) }).then(j),
@@ -23,7 +24,7 @@ const local = {
 // ---- Supabase ----
 // 새 publishable 키(sb_...)는 JWT가 아니므로 apikey 헤더만 보낸다
 const H = (extra = {}) => ({ apikey: KEY, ...(KEY.startsWith('sb_') ? {} : { Authorization: 'Bearer ' + KEY }), ...extra });
-const fromRow = r => ({ id: r.id, code: r.code, kind: r.kind, category: r.category, lostFound: r.lost_found, detail: r.detail, locationLabel: r.location_label, pin: r.pin, photo: r.photo, shot: r.shot, afterPhoto: r.after_photo, likes: r.likes || 0, status: r.status, createdAt: r.created_at });
+const fromRow = r => ({ id: r.id, code: r.code, kind: r.kind, category: r.category, lostFound: r.lost_found, detail: r.detail, itemDesc: r.item_desc || '', phone: r.phone_public || '', phonePublic: !!r.phone_public, locationLabel: r.location_label, pin: r.pin, photo: r.photo, shot: r.shot, afterPhoto: r.after_photo, likes: r.likes || 0, status: r.status, createdAt: r.created_at });
 async function upload(dataUrl) {
   if (!dataUrl) return null;
   const blob = await (await fetch(dataUrl)).blob();
@@ -36,9 +37,13 @@ const remote = {
   list: () => fetch(`${SB}/rest/v1/reports?select=*&created_at=gte.${encodeURIComponent(new Date(Date.now() - 30 * 86400000).toISOString())}&order=created_at.desc&limit=300`, { headers: H() }).then(j).then(rows => rows.map(fromRow)),
   async create(b) {
     const [photo, shot] = await Promise.all([upload(b.photo), upload(b.shot)]);
-    const body = { kind: b.kind, category: (b.category || '기타').slice(0, 20), lost_found: b.lostFound || null, detail: (b.detail || '').slice(0, 1000), location_label: (b.locationLabel || '').slice(0, 80), pin: b.pin || {}, photo, shot };
+    const body = { kind: b.kind, category: (b.category || '기타').slice(0, 20), lost_found: b.lostFound || null, detail: (b.detail || '').slice(0, 1000), item_desc: (b.itemDesc || '').slice(0, 200) || null, phone_public: b.phone && b.phonePublic ? String(b.phone).slice(0, 20) : null, location_label: (b.locationLabel || '').slice(0, 80), pin: b.pin || {}, photo, shot };
     const rows = await fetch(`${SB}/rest/v1/reports`, { method: 'POST', headers: H({ 'Content-Type': 'application/json', Prefer: 'return=representation' }), body: JSON.stringify(body) }).then(j);
     const row = fromRow(rows[0]);
+    if (b.phone && !b.phonePublic) { // 비공개 번호는 누구나 읽는 표가 아니라 따로 저장 (관리자만 확인)
+      const pr = await fetch(`${SB}/rest/v1/rpc/set_private_phone`, { method: 'POST', headers: H({ 'Content-Type': 'application/json' }), body: JSON.stringify({ rid: row.id, phone_in: String(b.phone).slice(0, 20) }) });
+      if (!pr.ok) throw new Error('전화번호를 저장하지 못했어요. 접수는 되었어요.');
+    }
     const r = await fetch(`${SB}/rest/v1/rpc/set_owner_pin`, { method: 'POST', headers: H({ 'Content-Type': 'application/json' }), body: JSON.stringify({ rid: row.id, pin_in: b.ownerPin }) });
     if (!r.ok) throw new Error('수정용 PIN을 저장하지 못했어요. 접수는 되었지만 나중에 수정할 수 없어요.');
     return row;
@@ -56,6 +61,11 @@ const remote = {
   async like(id, delta) {
     const r = await fetch(`${SB}/rest/v1/rpc/like_report`, { method: 'POST', headers: H({ 'Content-Type': 'application/json' }), body: JSON.stringify({ rid: id, delta }) });
     return { likes: await j(r) };
+  },
+  async getPhone(id, pin) {
+    const r = await fetch(`${SB}/rest/v1/rpc/admin_get_phone`, { method: 'POST', headers: H({ 'Content-Type': 'application/json' }), body: JSON.stringify({ rid: id, pin_in: pin }) });
+    if (!r.ok) throw new Error('PIN이 올바르지 않습니다.');
+    return { phone: (await r.json()) || '' };
   },
   async verifyOwner(id, pin) {
     const r = await fetch(`${SB}/rest/v1/rpc/check_owner_pin`, { method: 'POST', headers: H({ 'Content-Type': 'application/json' }), body: JSON.stringify({ rid: id, pin_in: pin }) });
