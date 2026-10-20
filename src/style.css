@@ -355,3 +355,6 @@ textarea.sm { resize: vertical; min-height: 54px; }
 /* 분실물: 처리 단계 2개 */
 .steps.two { grid-template-columns: repeat(2, 1fr); }
 .admin .seg.two { grid-template-columns: repeat(2, 1fr); }
+
+.locinfo { margin: 8px 0 12px; font-size: 14px; }
+.locinfo small { color: var(--muted); font-size: 12px; }

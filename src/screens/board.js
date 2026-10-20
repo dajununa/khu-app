@@ -143,7 +143,7 @@ export function board() {
         r.itemDesc ? h('p', { style: 'font-weight:700;margin-bottom:4px' }, r.itemDesc) : null,
         r.detail ? h('p', { style: r.itemDesc ? 'font-size:14px;color:var(--muted);margin-top:0' : '' }, r.detail) : null,
         phoneLine(),
-        lost && r.lostFound === '습득'
+        lost && (r.lostFound === '습득' || r.shot) // 주운 물건은 항상, 잃어버린 물건은 핀을 찍은 경우에만 두 칸
           ? h('div', { class: 'ba' }, // 주운 물건: 물품 사진 + 핀한 위치를 나란히. 없는 쪽은 안내 문구
               h('figure', {}, r.photo ? shotView(r, r.photo, 'bimg', '물품 사진') : h('div', { class: 'ph' }, '사진 없음'), h('figcaption', {}, '물품 사진')),
               h('figure', {}, r.shot ? shotView(r, r.shot, 'bimg', '핀한 위치') : h('div', { class: 'ph' }, '위치 없음', h('br'), '행정실에 문의'), h('figcaption', {}, '핀한 위치')))
@@ -152,6 +152,7 @@ export function board() {
           : h('div', { class: 'ba' },
           h('figure', {}, before ? shotView(r, before, 'bimg', '처리 전') : h('div', { class: 'ph' }, '사진 없음'), h('figcaption', {}, '처리 전')),
           h('figure', {}, r.afterPhoto ? h('img', { src: r.afterPhoto, alt: '처리 후' }) : h('div', { class: 'ph dash' }, r.status === '완료' ? '처리 후 사진 준비 중' : '완료되면 처리 후 사진이 올라와요'), h('figcaption', {}, '처리 후'))),
+        lost && r.lostFound !== '습득' && !r.shot ? h('div', { class: 'locinfo' }, '📍 ', h('b', {}, r.locationLabel || '위치 정보 없음'), h('small', {}, r.pin?.scope === 'all' ? ' · 정확한 위치는 몰라요' : r.pin?.scope === 'floor' ? ' · 층만 알아요' : '')) : null,
         admin() && !lost ? h('label', { class: 'btn block ghost', style: 'margin:0 0 12px;text-align:center;display:block;line-height:20px' }, r.afterPhoto ? '처리 후 사진 바꾸기 (관리자)' : '처리 후 사진 올리기 (관리자)',
           h('input', { type: 'file', accept: 'image/*', style: 'display:none', onChange: async e => {
             const f = e.target.files[0]; if (!f) return;
