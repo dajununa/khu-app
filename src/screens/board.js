@@ -27,17 +27,28 @@ const shotView = (r, src, cls, alt) => {
   im.addEventListener('load', () => { const b = hasBaked(im); if (b === false || (b === null && needsCross(r))) wrap.append(crossSvg()); });
   return wrap;
 };
+const codeTag = r => (r.code ? h('span', { class: 'code' }, r.code) : null);
+// 검색: 관리번호는 F-012, f012, f12 어느 쪽으로 써도 찾는다. 그 밖에 항목·세부 내용도 함께 본다.
+const norm = t => String(t || '').toLowerCase().replace(/[^0-9a-z가-힣]/g, '');
+const hit = (r, q) => {
+  const m = /^([flr])-?0*(\d+)$/i.exec(q.trim());
+  if (m) return !!r.code && r.code[0].toLowerCase() === m[1].toLowerCase() && parseInt(r.code.slice(2), 10) === +m[2];
+  const nq = norm(q);
+  return !nq || norm(r.code).includes(nq) || norm(r.category).includes(nq) || norm(r.detail).includes(nq);
+};
 const badge = s => h('span', { class: `badge s-${sIdx(s)}` }, s);
 
 export function board() {
-  let rows = [], kind = '전체', status = '전체', cat = '전체', timer;
+  let rows = [], kind = '전체', status = '전체', cat = '전체', q = '', timer;
   const root = h('div', {});
   const list = h('div', { class: 'list' });
   const chips = h('div', { class: 'chips', role: 'tablist' });
   const kindSeg = h('div', { class: 'chips' });
+  const search = h('input', { class: 'search', type: 'search', placeholder: '관리번호(예: F-012) 또는 내용 검색', 'aria-label': '검색', autocomplete: 'off' });
+  search.addEventListener('input', () => { q = search.value; draw(); });
   const catChips = h('div', { class: 'chips', 'aria-label': '항목' });
   const catNames = () => [...new Set((kind === '전체' ? Object.values(CATEGORIES).flat() : CATEGORIES[kind]).map(c => c[0]))];
-  const match = r => (kind === '전체' || r.kind === kind) && (status === '전체' || r.status === status) && (cat === '전체' || r.category === cat);
+  const match = r => hit(r, q) && (kind === '전체' || r.kind === kind) && (status === '전체' || r.status === status) && (cat === '전체' || r.category === cat);
 
   function drawChips() {
     kindSeg.replaceChildren(...['전체', '하자', '분실물'].map(k => h('button', { class: `chip ${kind === k ? 'on' : ''}`, onClick: () => { kind = k; cat = '전체'; draw(); } }, k)));
@@ -53,14 +64,14 @@ export function board() {
   function draw() {
     drawChips();
     const shown = rows.filter(match);
-    list.replaceChildren(...(shown.length ? shown.map(card) : [h('div', { class: 'empty' }, h('b', {}, '접수된 내용이 없어요'), '홈에서 층을 골라 첫 신고를 남겨 보세요.')]));
+    list.replaceChildren(...(shown.length ? shown.map(card) : [h('div', { class: 'empty' }, h('b', {}, '접수된 내용이 없어요'), q ? '검색 결과가 없어요. 관리번호를 다시 확인해 보세요.' : '홈에서 층을 골라 첫 신고를 남겨 보세요.')]));
   }
   function card(r) {
     const img = r.photo || r.shot; // 직접 올린 사진이 있으면 그것을 먼저
     const el = h('button', { class: `item ${nav.justAdded === r.id ? 'new' : ''}`, onClick: () => openSheet(r) },
       img ? shotView(r, img, 'th', '') : h('div', { class: 'th none' }, '사진 없음'),
       h('div', { class: 'body' },
-        h('div', { class: 'row' }, h('span', { class: 'kind' }, tagText(r)), badge(r.status), h('span', { class: 'dt' }, ago(r.createdAt))),
+        h('div', { class: 'row' }, codeTag(r), h('span', { class: 'kind' }, tagText(r)), badge(r.status), h('span', { class: 'dt' }, ago(r.createdAt))),
         r.likes ? h('div', { class: 'lk' }, `♥ ${r.likes}`) : null,
         sessionStorage.getItem('khu_pin') ? h('div', { class: 'loc1' }, r.locationLabel || '위치 정보 없음') : null,
         r.detail ? h('div', { class: 'tx' }, r.detail) : null));
@@ -75,7 +86,7 @@ export function board() {
     const paint = () => {
       sheet.replaceChildren(...[
         h('div', { class: 'grab' }),
-        h('div', { class: 'row', style: 'display:flex;gap:6px;align-items:center;flex-wrap:wrap' }, h('span', { class: 'kind' }, tagText(r)), badge(r.status), ),
+        h('div', { class: 'row', style: 'display:flex;gap:6px;align-items:center;flex-wrap:wrap' }, codeTag(r), h('span', { class: 'kind' }, tagText(r)), badge(r.status), ),
         h('div', { class: 'meta' }, h('span', {}, `${fullTime(r.createdAt)} 신고`),
           h('button', { class: `like ${liked(r.id) ? 'on' : ''}`, onClick: async () => {
             const on = !liked(r.id), d = on ? 1 : -1;
@@ -146,7 +157,7 @@ export function board() {
   async function refresh() {
     try { rows = await api.list(); draw(); } catch { if (!rows.length) list.replaceChildren(h('div', { class: 'empty' }, h('b', {}, '불러오지 못했어요'), '서버가 켜져 있는지 확인해 주세요.')); }
   }
-  root.append(h('div', { class: 'topbar head2' }, h('div', {}, h('h1', {}, '접수현황'), h('p', { class: 'sub' }, '지금까지 접수된 하자·분실물 신고예요. 누구나 볼 수 있어요.'))), kindSeg, catChips, chips, list);
+  root.append(h('div', { class: 'topbar head2' }, h('div', {}, h('h1', {}, '접수현황'), h('p', { class: 'sub' }, '지금까지 접수된 하자·분실물 신고예요. 누구나 볼 수 있어요.'))), h('div', { class: 'searchrow' }, search), kindSeg, catChips, chips, list);
   list.replaceChildren(h('div', { class: 'empty' }, '불러오는 중…'));
   refresh().then(() => { nav.justAdded = null; });
   timer = setInterval(refresh, 15000);

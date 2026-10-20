@@ -83,7 +83,7 @@ export function report() {
     submit.disabled = true; submit.textContent = '접수 중…';
     try {
       const row = await api.create({ kind: draft.kind, category: draft.category, lostFound: draft.kind === '분실물' ? draft.lostFound : null, detail, locationLabel: draft.label, pin: found ? { ...draft.pin, found: draft.foundAction } : draft.pin, photo: draft.photo, shot: draft.shot, ownerPin: pinIn.value });
-      resetDraft(); nav.tour = null; nav.justAdded = row.id; toast('접수되었어요. 접수현황에서 확인할 수 있어요.'); location.hash = '#/board';
+      resetDraft(); nav.tour = null; nav.justAdded = row.id; toast(row.code ? `접수되었어요. 관리번호 ${row.code}` : '접수되었어요. 접수현황에서 확인할 수 있어요.'); location.hash = '#/board';
     } catch (e) { toast(e.message); submit.disabled = false; submit.textContent = '신고 접수'; }
   });
 

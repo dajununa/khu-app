@@ -11,7 +11,20 @@ const STATUSES = ['미확인', '확인', '진행 중', '완료'];
 const KINDS = ['하자', '분실물'];
 
 fs.mkdirSync(UPLOADS, { recursive: true });
-const load = () => { try { return JSON.parse(fs.readFileSync(DB, 'utf8')); } catch { return []; } };
+const COUNTERS = path.join(DATA, 'counters.json'); // 관리번호 접두사별 마지막 번호 (글을 지워도 번호를 다시 쓰지 않는다)
+const prefixOf = r => (r.kind === '하자' ? 'R' : r.lostFound === '습득' ? 'F' : 'L'); // R 하자보수 / F 찾았어요(습득) / L 잃어버렸어요(분실)
+const nextCode = (rows, r) => {
+  let c = {}; try { c = JSON.parse(fs.readFileSync(COUNTERS, 'utf8')); } catch {}
+  const p = prefixOf(r), floor = Math.max(0, ...rows.map(x => (x.code?.[0] === p ? parseInt(x.code.slice(2), 10) || 0 : 0)));
+  const n = Math.max(c[p] || 0, floor) + 1; c[p] = n; fs.writeFileSync(COUNTERS, JSON.stringify(c));
+  return `${p}-${String(n).padStart(3, '0')}`;
+};
+const load = () => {
+  let rows; try { rows = JSON.parse(fs.readFileSync(DB, 'utf8')); } catch { return []; }
+  const missing = rows.filter(r => !r.code); // 번호가 생기기 전에 접수된 글은 접수 순서대로 번호를 붙인다
+  if (missing.length) { missing.sort((a, b) => a.createdAt.localeCompare(b.createdAt)).forEach(r => { r.code = nextCode(rows, r); }); fs.writeFileSync(DB, JSON.stringify(rows, null, 1)); }
+  return rows;
+};
 const save = (rows) => fs.writeFileSync(DB, JSON.stringify(rows, null, 1));
 
 const hits = new Map(); // 아주 단순한 도배 방지: IP당 1분에 10건
@@ -75,10 +88,12 @@ export function reportsApi() {
         if (category === '기타' && !detail) return send(res, 400, { error: '기타는 내용을 적어 주세요.' });
         if (!/^\d{4}$/.test(String(b.ownerPin ?? ''))) return send(res, 400, { error: '수정·삭제용 PIN 4자리를 입력해 주세요.' });
         const w = b.pin || {};
+        const lostFound = ['분실', '습득'].includes(b.lostFound) ? b.lostFound : null;
         const row = {
           ownerPin: String(b.ownerPin),
+          code: nextCode(rows, { kind, lostFound }),
           id: crypto.randomBytes(6).toString('hex'),
-          kind, category, lostFound: ['분실', '습득'].includes(b.lostFound) ? b.lostFound : null, detail,
+          kind, category, lostFound, detail,
           locationLabel: str(b.locationLabel, 80),
           pin: { scene: str(w.scene, 40), floor: str(w.floor, 8), waypoint: str(w.waypoint, 60), yaw: +w.yaw || 0, pitch: +w.pitch || 0, ...(['all', 'floor'].includes(w.scope) ? { scope: w.scope } : {}), ...(['left', 'office'].includes(w.found) ? { found: w.found } : {}) }, // 위치 범위(scope): 없으면 3D 핀. found: 습득 물건 처리
           photo: saveImage(b.photo), shot: saveImage(b.shot), afterPhoto: null, likes: 0,

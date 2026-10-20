@@ -23,7 +23,7 @@ const local = {
 // ---- Supabase ----
 // 새 publishable 키(sb_...)는 JWT가 아니므로 apikey 헤더만 보낸다
 const H = (extra = {}) => ({ apikey: KEY, ...(KEY.startsWith('sb_') ? {} : { Authorization: 'Bearer ' + KEY }), ...extra });
-const fromRow = r => ({ id: r.id, kind: r.kind, category: r.category, lostFound: r.lost_found, detail: r.detail, locationLabel: r.location_label, pin: r.pin, photo: r.photo, shot: r.shot, afterPhoto: r.after_photo, likes: r.likes || 0, status: r.status, createdAt: r.created_at });
+const fromRow = r => ({ id: r.id, code: r.code, kind: r.kind, category: r.category, lostFound: r.lost_found, detail: r.detail, locationLabel: r.location_label, pin: r.pin, photo: r.photo, shot: r.shot, afterPhoto: r.after_photo, likes: r.likes || 0, status: r.status, createdAt: r.created_at });
 async function upload(dataUrl) {
   if (!dataUrl) return null;
   const blob = await (await fetch(dataUrl)).blob();
