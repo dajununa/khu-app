@@ -314,3 +314,22 @@ textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
 .fsel { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; border: 1px solid var(--line); background: var(--surface); border-radius: 12px; padding: 0 10px 0 12px; }
 .fsel span { flex: none; font-size: 12px; font-weight: 700; color: var(--muted); }
 .fsel select { flex: 1; min-width: 0; border: 0; background: transparent; padding: 10px 0; font-size: 14px; font-weight: 600; color: var(--ink); }
+
+/* 접수현황 위쪽: 밑줄 탭 + 검색·필터 버튼 + 켜 둔 조건 태그 */
+.ktabs { display: flex; gap: 22px; padding: 0 20px; border-bottom: 1px solid var(--line); margin-bottom: 12px; }
+.ktabs button { border: 0; background: transparent; padding: 10px 2px; font-size: 16px; font-weight: 700; color: var(--muted); border-bottom: 3px solid transparent; margin-bottom: -1px; }
+.ktabs button.on { color: var(--ink); border-bottom-color: var(--ink); }
+.toolrow { display: flex; gap: 8px; padding: 0 16px 10px; }
+.toolrow .search { flex: 1; min-width: 0; }
+.fbtn { flex: none; display: flex; align-items: center; gap: 6px; border: 1px solid var(--line); background: var(--surface); border-radius: 12px; padding: 0 14px; font-size: 14px; font-weight: 700; color: var(--ink); }
+.fbtn svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+.fbtn b { background: var(--ink); color: var(--bg); border-radius: 999px; min-width: 18px; height: 18px; font-size: 11px; display: grid; place-items: center; padding: 0 5px; }
+.ftags { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 16px 10px; }
+.ftags[hidden] { display: none; }
+.ftag { display: flex; align-items: center; gap: 6px; border: 0; background: var(--ink); color: var(--bg); border-radius: 999px; padding: 5px 8px 5px 12px; font-size: 13px; font-weight: 600; }
+.ftag span { opacity: .7; font-size: 15px; line-height: 1; }
+.fgroup { margin-bottom: 18px; }
+.fopts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+.fopt { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 8px 14px; font-size: 14px; font-weight: 600; color: var(--muted); }
+.fopt.on { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.factions { display: grid; grid-template-columns: 1fr 2fr; gap: 10px; margin-top: 6px; }

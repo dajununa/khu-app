@@ -42,31 +42,45 @@ export function board() {
   let rows = [], kind = '전체', status = '전체', cat = '전체', lf = '전체', q = '', timer;
   const root = h('div', {});
   const list = h('div', { class: 'list' });
-  const chips = h('div', { class: 'frow' });
-  const kindSeg = h('div', { class: 'fwrap' });
   const search = h('input', { class: 'search', type: 'search', placeholder: '관리번호(예: F-012) 또는 내용 검색', 'aria-label': '검색', autocomplete: 'off' });
   search.addEventListener('input', () => { q = search.value; draw(); });
-  const lfChips = h('div', { class: 'fwrap', 'aria-label': '분실·발견' });
-  const catNames = () => [...new Set((kind === '전체' ? Object.values(CATEGORIES).flat() : CATEGORIES[kind]).map(c => c[0]))];
+  const catNames = () => (kind === '전체' ? [] : CATEGORIES[kind].map(c => c[0]));
   const match = r => hit(r, q) && (kind === '전체' || r.kind === kind) && (status === '전체' || r.status === status) && (cat === '전체' || r.category === cat) && (lf === '전체' || r.lostFound === lf);
+  const lfName = v => (v === '습득' ? '발견' : v);
 
-  const sel = (label, value, opts, onPick) => { // 드롭다운: opts = [[값, 이름, 건수]]
-    const el = h('select', { 'aria-label': label }, ...opts.map(([v, name, n]) => h('option', { value: v }, `${name} ${n}`)));
-    el.value = value; el.addEventListener('change', () => onPick(el.value));
-    return h('label', { class: 'fsel' }, h('span', {}, label), el);
-  };
-  const segOf = (cls, items, cur, pick) => h('div', { class: cls }, ...items.map(([v, name]) => h('button', { type: 'button', class: v === cur ? 'on' : '', onClick: () => pick(v) }, name)));
+  // 위쪽: 큰 구분 탭(밑줄) + 검색 + 필터 버튼. 세부 조건은 필터 창에서 고르고, 켜 둔 조건은 목록 위에 태그로 보인다.
+  const tabs = h('div', { class: 'ktabs', role: 'tablist' });
+  const filterBtn = h('button', { class: 'fbtn', type: 'button', 'aria-haspopup': 'dialog', onClick: () => openFilter() });
+  const tags = h('div', { class: 'ftags' });
+  const reset = () => { cat = '전체'; lf = '전체'; status = '전체'; };
+  const activeTags = () => [
+    lf !== '전체' && [lfName(lf), () => { lf = '전체'; }],
+    cat !== '전체' && [cat, () => { cat = '전체'; }],
+    status !== '전체' && [status, () => { status = '전체'; }],
+  ].filter(Boolean);
   function drawChips() {
-    // 큰 구분은 세그먼트 한 줄. 분실/발견·항목은 시설 지원·분실물 탭을 눌렀을 때만 나오고, 전체에서는 나누지 않는다.
-    kindSeg.replaceChildren(segOf('fseg', ['전체', '하자', '분실물'].map(k => [k, kindName(k)]), kind, k => { kind = k; cat = '전체'; lf = '전체'; draw(); }));
-    lfChips.hidden = kind !== '분실물';
-    lfChips.replaceChildren(segOf('fseg sub', [['전체', '전체'], ['분실', '분실'], ['습득', '발견']], lf, v => { lf = v; draw(); }));
-    const base = r => (kind === '전체' || r.kind === kind) && (lf === '전체' || r.lostFound === lf);
-    const cnt = f => rows.filter(r => hit(r, q) && base(r) && f(r)).length;
-    const filters = [];
-    if (kind !== '전체') filters.push(sel('항목', cat, [['전체', '전체', cnt(r => status === '전체' || r.status === status)], ...catNames().map(c => [c, c, cnt(r => r.category === c && (status === '전체' || r.status === status))])], v => { cat = v; draw(); }));
-    filters.push(sel('상태', status, [['전체', '전체', cnt(r => cat === '전체' || r.category === cat)], ...STATUSES.map(st => [st, st, cnt(r => r.status === st && (cat === '전체' || r.category === cat))])], v => { status = v; draw(); }));
-    chips.replaceChildren(...filters);
+    tabs.replaceChildren(...['전체', '하자', '분실물'].map(k => h('button', { type: 'button', role: 'tab', class: kind === k ? 'on' : '', 'aria-selected': String(kind === k), onClick: () => { kind = k; reset(); draw(); } }, kindName(k))));
+    const act = activeTags();
+    filterBtn.replaceChildren(h('svg', { viewBox: '0 0 24 24' }, h('path', { d: 'M4 6h16M7 12h10M10 18h4' })), '필터', act.length ? h('b', {}, String(act.length)) : null);
+    tags.hidden = !act.length;
+    tags.replaceChildren(...act.map(([name, clear]) => h('button', { type: 'button', class: 'ftag', 'aria-label': `${name} 조건 지우기`, onClick: () => { clear(); draw(); } }, name, h('span', {}, '×'))));
+  }
+
+  // 필터 창 (아래에서 올라오는 시트). 바꾸는 즉시 목록에 반영된다.
+  function openFilter() {
+    const bg = h('div', { class: 'sheet-bg', onClick: e => e.target === bg && bg.remove() });
+    const sheet = h('div', { class: 'sheet', role: 'dialog', 'aria-label': '필터' });
+    const group = (title, items, cur, pick) => h('div', { class: 'fgroup' }, h('span', { class: 'lbl' }, title),
+      h('div', { class: 'fopts' }, ...items.map(([v, name]) => h('button', { type: 'button', class: `fopt ${cur === v ? 'on' : ''}`, onClick: () => { pick(cur === v ? '전체' : v); draw(); paint(); } }, name))));
+    const paint = () => {
+      const n = rows.filter(match).length;
+      sheet.replaceChildren(h('div', { class: 'grab' }), h('h2', { style: 'font-size:18px;margin:8px 0 14px' }, '필터'),
+        kind === '분실물' ? group('분실 / 발견', [['분실', '분실'], ['습득', '발견']], lf, v => { lf = v; }) : null,
+        kind !== '전체' ? group(kind === '하자' ? '시설 종류' : '물건 종류', catNames().map(c => [c, c]), cat, v => { cat = v; }) : null,
+        group('처리 상태', STATUSES.map(st => [st, st]), status, v => { status = v; }),
+        h('div', { class: 'factions' }, h('button', { class: 'btn ghost', type: 'button', onClick: () => { reset(); draw(); paint(); } }, '초기화'), h('button', { class: 'btn', type: 'button', onClick: () => bg.remove() }, `${n}건 보기`)));
+    };
+    paint(); bg.append(sheet); document.getElementById('app').append(bg);
   }
   function draw() {
     drawChips();
@@ -164,7 +178,7 @@ export function board() {
   async function refresh() {
     try { rows = await api.list(); draw(); } catch { if (!rows.length) list.replaceChildren(h('div', { class: 'empty' }, h('b', {}, '불러오지 못했어요'), '서버가 켜져 있는지 확인해 주세요.')); }
   }
-  root.append(h('div', { class: 'topbar head2' }, h('div', {}, h('h1', {}, '접수현황'), h('p', { class: 'sub' }, '지금까지 접수된 시설 지원·분실물 신고예요. 누구나 볼 수 있어요.'))), h('div', { class: 'searchrow' }, search), kindSeg, lfChips, chips, list);
+  root.append(h('div', { class: 'topbar head2' }, h('div', {}, h('h1', {}, '접수현황'), h('p', { class: 'sub' }, '지금까지 접수된 시설 지원·분실물 신고예요. 누구나 볼 수 있어요.'))), tabs, h('div', { class: 'toolrow' }, search, filterBtn), tags, list);
   list.replaceChildren(h('div', { class: 'empty' }, '불러오는 중…'));
   refresh().then(() => { nav.justAdded = null; });
   timer = setInterval(refresh, 15000);
