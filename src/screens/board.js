@@ -112,7 +112,7 @@ export function board() {
     const bg = h('div', { class: 'sheet-bg', onClick: e => e.target === bg && bg.remove() });
     const admin = () => sessionStorage.getItem('khu_pin');
     const lost = r.kind === '분실물'; // 분실물은 처리 전 칸에 직접 찍은 사진, 핀한 3D 화면은 아래 칸
-    const before = lost ? r.photo || r.shot : r.shot || r.photo;
+    const before = lost ? r.photo : r.shot || r.photo; // 분실물의 '물품 사진'은 직접 올린 사진만 (핀한 화면으로 대신하지 않는다)
     const sheet = h('div', { class: 'sheet', role: 'dialog', 'aria-label': '신고 상세' });
     // 연락처: 작성자가 공개로 정했으면 누구나, 비공개면 관리자(PIN 입력)만 본다
     let adminPhone;
@@ -143,7 +143,11 @@ export function board() {
         r.itemDesc ? h('p', { style: 'font-weight:700;margin-bottom:4px' }, r.itemDesc) : null,
         r.detail ? h('p', { style: r.itemDesc ? 'font-size:14px;color:var(--muted);margin-top:0' : '' }, r.detail) : null,
         phoneLine(),
-        lost
+        lost && r.lostFound === '습득'
+          ? h('div', { class: 'ba' }, // 주운 물건: 물품 사진 + 핀한 위치를 나란히. 없는 쪽은 안내 문구
+              h('figure', {}, r.photo ? shotView(r, r.photo, 'bimg', '물품 사진') : h('div', { class: 'ph' }, '사진 없음'), h('figcaption', {}, '물품 사진')),
+              h('figure', {}, r.shot ? shotView(r, r.shot, 'bimg', '핀한 위치') : h('div', { class: 'ph' }, '위치 없음', h('br'), '행정실에 문의'), h('figcaption', {}, '핀한 위치')))
+        : lost
           ? h('div', { class: 'imgs' }, h('figure', {}, before ? shotView(r, before, 'bimg', '물품 사진') : h('div', { class: 'ph' }, '사진 없음'), h('figcaption', {}, '물품 사진')))
           : h('div', { class: 'ba' },
           h('figure', {}, before ? shotView(r, before, 'bimg', '처리 전') : h('div', { class: 'ph' }, '사진 없음'), h('figcaption', {}, '처리 전')),
