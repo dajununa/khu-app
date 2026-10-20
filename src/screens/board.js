@@ -36,7 +36,14 @@ const hit = (r, q) => {
   const nq = norm(q);
   return !nq || norm(r.code).includes(nq) || norm(r.category).includes(nq) || norm(r.itemDesc).includes(nq) || norm(r.detail).includes(nq);
 };
-const badge = s => h('span', { class: `badge s-${sIdx(s)}` }, s);
+// 분실물은 처리 단계를 둘로만 보여 준다 (저장 값은 그대로: 완료 = 반환완료, 나머지 = 접수완료)
+const LOST_STEPS = ['접수완료', '반환완료'];
+const isLostRow = r => r.kind === '분실물';
+const stepsOf = r => (isLostRow(r) ? LOST_STEPS : STATUSES);
+const stIdx = r => (isLostRow(r) ? (r.status === '완료' ? 1 : 0) : sIdx(r.status));
+const stName = r => stepsOf(r)[stIdx(r)];
+const stSave = (r, name) => (isLostRow(r) ? (name === '반환완료' ? '완료' : '미확인') : name);
+const badge = r => h('span', { class: `badge s-${isLostRow(r) ? (stIdx(r) ? 3 : 0) : stIdx(r)}` }, stName(r));
 
 export function board() {
   let rows = [], kind = '전체', status = '전체', cat = '전체', lf = '전체', q = '', timer;
@@ -45,7 +52,10 @@ export function board() {
   const search = h('input', { class: 'search', type: 'search', placeholder: '관리번호(예: F-012) 또는 내용 검색', 'aria-label': '검색', autocomplete: 'off' });
   search.addEventListener('input', () => { q = search.value; draw(); });
   const catNames = () => (kind === '전체' ? [] : CATEGORIES[kind].map(c => c[0]));
-  const match = r => hit(r, q) && (kind === '전체' || r.kind === kind) && (status === '전체' || r.status === status) && (cat === '전체' || r.category === cat) && (lf === '전체' || r.lostFound === lf);
+  // 처리 상태 필터: 분실물 탭은 접수완료/반환완료, 시설 지원 탭은 4단계, 전체 탭은 처리 중/완료
+  const stMatch = r => status === '전체' || (kind === '하자' ? r.status === status : (kind === '분실물' ? status === '반환완료' : status === '완료') ? r.status === '완료' : r.status !== '완료');
+  const statusOpts = () => (kind === '분실물' ? LOST_STEPS : kind === '하자' ? STATUSES : ['처리 중', '완료']);
+  const match = r => hit(r, q) && (kind === '전체' || r.kind === kind) && stMatch(r) && (cat === '전체' || r.category === cat) && (lf === '전체' || r.lostFound === lf);
   const lfName = v => (v === '습득' ? '발견' : v);
 
   // 위쪽: 큰 구분 탭(밑줄) + 검색 + 필터 버튼. 세부 조건은 필터 창에서 고르고, 켜 둔 조건은 목록 위에 태그로 보인다.
@@ -77,7 +87,7 @@ export function board() {
       sheet.replaceChildren(...[h('div', { class: 'grab' }), h('h2', { style: 'font-size:18px;margin:8px 0 14px' }, '필터'),
         kind === '분실물' ? group('분실 / 발견', [['분실', '분실'], ['습득', '발견']], lf, v => { lf = v; }) : null,
         kind !== '전체' ? group(kind === '하자' ? '시설 종류' : '물건 종류', catNames().map(c => [c, c]), cat, v => { cat = v; }) : null,
-        group('처리 상태', STATUSES.map(st => [st, st]), status, v => { status = v; }),
+        group('처리 상태', statusOpts().map(st => [st, st]), status, v => { status = v; }),
         h('div', { class: 'factions' }, h('button', { class: 'btn ghost', type: 'button', onClick: () => { reset(); draw(); paint(); } }, '초기화'), h('button', { class: 'btn', type: 'button', onClick: () => bg.remove() }, `${n}건 보기`))].filter(Boolean));
     };
     paint(); bg.append(sheet); document.getElementById('app').append(bg);
@@ -92,7 +102,7 @@ export function board() {
     const el = h('button', { class: `item ${nav.justAdded === r.id ? 'new' : ''}`, onClick: () => openSheet(r) },
       img ? shotView(r, img, 'th', '') : h('div', { class: 'th none' }, '사진 없음'),
       h('div', { class: 'body' },
-        h('div', { class: 'row' }, codeTag(r), h('span', { class: 'kind' }, tagText(r)), badge(r.status), h('span', { class: 'dt' }, ago(r.createdAt))),
+        h('div', { class: 'row' }, codeTag(r), h('span', { class: 'kind' }, tagText(r)), badge(r), h('span', { class: 'dt' }, ago(r.createdAt))),
         r.likes ? h('div', { class: 'lk' }, `♥ ${r.likes}`) : null,
         sessionStorage.getItem('khu_pin') ? h('div', { class: 'loc1' }, r.locationLabel || '위치 정보 없음') : null,
         r.itemDesc || r.detail ? h('div', { class: 'tx' }, r.itemDesc || r.detail) : null));
@@ -121,7 +131,7 @@ export function board() {
     const paint = () => {
       sheet.replaceChildren(...[
         h('div', { class: 'grab' }),
-        h('div', { class: 'row', style: 'display:flex;gap:6px;align-items:center;flex-wrap:wrap' }, codeTag(r), h('span', { class: 'kind' }, tagText(r)), badge(r.status), ),
+        h('div', { class: 'row', style: 'display:flex;gap:6px;align-items:center;flex-wrap:wrap' }, codeTag(r), h('span', { class: 'kind' }, tagText(r)), badge(r), ),
         h('div', { class: 'meta' }, h('span', {}, `${fullTime(r.createdAt)} 신고`),
           h('button', { class: `like ${liked(r.id) ? 'on' : ''}`, onClick: async () => {
             const on = !liked(r.id), d = on ? 1 : -1;
@@ -129,23 +139,25 @@ export function board() {
             try { const u = await api.like(r.id, d); r.likes = u.likes; } catch { setLiked(r.id, !on); r.likes = Math.max(0, r.likes - d); toast('공감에 실패했어요.'); }
             paint(); draw(); } }, `${liked(r.id) ? '♥' : '♡'} 공감 ${r.likes || 0}`)),
         admin() ? h('h2', { style: 'font-size:18px;margin-top:8px' }, r.locationLabel || '위치 정보 없음') : null,
-        h('div', { class: 'steps' }, STATUSES.map((s, i) => h('div', { class: i <= sIdx(r.status) ? 'on' : '' }, s))),
+        h('div', { class: `steps ${lost ? 'two' : ''}` }, stepsOf(r).map((st, i) => h('div', { class: i <= stIdx(r) ? 'on' : '' }, st))),
         r.itemDesc ? h('p', { style: 'font-weight:700;margin-bottom:4px' }, r.itemDesc) : null,
         r.detail ? h('p', { style: r.itemDesc ? 'font-size:14px;color:var(--muted);margin-top:0' : '' }, r.detail) : null,
         phoneLine(),
-        h('div', { class: 'ba' },
+        lost
+          ? h('div', { class: 'imgs' }, h('figure', {}, before ? shotView(r, before, 'bimg', '물품 사진') : h('div', { class: 'ph' }, '사진 없음'), h('figcaption', {}, '물품 사진')))
+          : h('div', { class: 'ba' },
           h('figure', {}, before ? shotView(r, before, 'bimg', '처리 전') : h('div', { class: 'ph' }, '사진 없음'), h('figcaption', {}, '처리 전')),
           h('figure', {}, r.afterPhoto ? h('img', { src: r.afterPhoto, alt: '처리 후' }) : h('div', { class: 'ph dash' }, r.status === '완료' ? '처리 후 사진 준비 중' : '완료되면 처리 후 사진이 올라와요'), h('figcaption', {}, '처리 후'))),
-        admin() ? h('label', { class: 'btn block ghost', style: 'margin:0 0 12px;text-align:center;display:block;line-height:20px' }, r.afterPhoto ? '처리 후 사진 바꾸기 (관리자)' : '처리 후 사진 올리기 (관리자)',
+        admin() && !lost ? h('label', { class: 'btn block ghost', style: 'margin:0 0 12px;text-align:center;display:block;line-height:20px' }, r.afterPhoto ? '처리 후 사진 바꾸기 (관리자)' : '처리 후 사진 올리기 (관리자)',
           h('input', { type: 'file', accept: 'image/*', style: 'display:none', onChange: async e => {
             const f = e.target.files[0]; if (!f) return;
             try { const u = await api.setAfterPhoto(r.id, await shrinkImage(f), admin()); Object.assign(r, u); paint(); draw(); toast('처리 후 사진을 올렸어요.'); }
             catch (err) { toast(err.message); if (/PIN/.test(err.message)) sessionStorage.removeItem('khu_pin'), paint(); } } })) : null,
-        h('div', { class: 'imgs' }, r.photo && r.shot ? (lost ? h('figure', {}, shotView(r, r.shot, 'bimg', '핀한 3D 화면'), h('figcaption', {}, '핀한 위치')) : h('figure', {}, h('img', { src: r.photo, alt: '신고 사진' }), h('figcaption', {}, '현장 사진'))) : null, null),
+        lost ? null : h('div', { class: 'imgs' }, r.photo && r.shot ? h('figure', {}, h('img', { src: r.photo, alt: '신고 사진' }), h('figcaption', {}, '현장 사진')) : null, null),
         admin() && r.pin?.waypoint ? h('button', { class: 'btn block ghost', onClick: () => { bg.remove(); goTour({ scene: r.pin.scene, floor: r.pin.floor, waypointId: r.pin.waypoint, yaw: r.pin.yaw, pitch: r.pin.pitch, mode: 'view' }); } }, '📍 3D로 위치 보기') : null,
         admin()
-          ? h('div', { class: 'admin' }, h('span', { class: 'lbl' }, '처리 상태 변경 (관리자)'), h('div', { class: 'seg' }, STATUSES.map(s => h('button', { class: s === r.status ? 'on' : '', onClick: async () => {
-              try { const u = await api.setStatus(r.id, s, admin()); Object.assign(r, u); paint(); draw(); } catch (e) { toast(e.message); if (/PIN/.test(e.message)) sessionStorage.removeItem('khu_pin'), paint(); } } }, s))),
+          ? h('div', { class: 'admin' }, h('span', { class: 'lbl' }, '처리 상태 변경 (관리자)'), h('div', { class: `seg ${lost ? 'two' : ''}` }, stepsOf(r).map(s => h('button', { class: s === stName(r) ? 'on' : '', onClick: async () => {
+              try { const u = await api.setStatus(r.id, stSave(r, s), admin()); Object.assign(r, u); paint(); draw(); } catch (e) { toast(e.message); if (/PIN/.test(e.message)) sessionStorage.removeItem('khu_pin'), paint(); } } }, s))),
               h('button', { class: 'btn block ghost', style: 'margin-top:12px;color:#c0392b;border-color:#c0392b', onClick: async () => {
                 if (!confirm('이 신고를 삭제할까요? 되돌릴 수 없어요.')) return;
                 try { await api.remove(r.id, admin()); rows = rows.filter(x => x.id !== r.id); bg.remove(); draw(); toast('삭제했어요.'); }

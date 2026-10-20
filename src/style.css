@@ -351,3 +351,7 @@ textarea.sm { resize: vertical; min-height: 54px; }
 .phoneline small { color: var(--muted); font-size: 12px; }
 
 .sm::placeholder { color: var(--muted); opacity: .55; }
+
+/* 분실물: 처리 단계 2개 */
+.steps.two { grid-template-columns: repeat(2, 1fr); }
+.admin .seg.two { grid-template-columns: repeat(2, 1fr); }
