@@ -42,31 +42,31 @@ export function board() {
   let rows = [], kind = '전체', status = '전체', cat = '전체', lf = '전체', q = '', timer;
   const root = h('div', {});
   const list = h('div', { class: 'list' });
-  const chips = h('div', { class: 'chips', role: 'tablist' });
-  const kindSeg = h('div', { class: 'chips' });
+  const chips = h('div', { class: 'frow' });
+  const kindSeg = h('div', { class: 'fwrap' });
   const search = h('input', { class: 'search', type: 'search', placeholder: '관리번호(예: F-012) 또는 내용 검색', 'aria-label': '검색', autocomplete: 'off' });
   search.addEventListener('input', () => { q = search.value; draw(); });
-  const lfChips = h('div', { class: 'chips', 'aria-label': '분실·발견' });
-  const catChips = h('div', { class: 'chips', 'aria-label': '항목' });
+  const lfChips = h('div', { class: 'fwrap', 'aria-label': '분실·발견' });
   const catNames = () => [...new Set((kind === '전체' ? Object.values(CATEGORIES).flat() : CATEGORIES[kind]).map(c => c[0]))];
   const match = r => hit(r, q) && (kind === '전체' || r.kind === kind) && (status === '전체' || r.status === status) && (cat === '전체' || r.category === cat) && (lf === '전체' || r.lostFound === lf);
 
+  const sel = (label, value, opts, onPick) => { // 드롭다운: opts = [[값, 이름, 건수]]
+    const el = h('select', { 'aria-label': label }, ...opts.map(([v, name, n]) => h('option', { value: v }, `${name} ${n}`)));
+    el.value = value; el.addEventListener('change', () => onPick(el.value));
+    return h('label', { class: 'fsel' }, h('span', {}, label), el);
+  };
+  const segOf = (cls, items, cur, pick) => h('div', { class: cls }, ...items.map(([v, name]) => h('button', { type: 'button', class: v === cur ? 'on' : '', onClick: () => pick(v) }, name)));
   function drawChips() {
-    kindSeg.replaceChildren(...['전체', '하자', '분실물'].map(k => h('button', { class: `chip ${kind === k ? 'on' : ''}`, onClick: () => { kind = k; cat = '전체'; lf = '전체'; draw(); } }, kindName(k))));
-    // 세부 선택(분실/발견, 항목)은 하자·분실물 탭을 눌렀을 때만 나온다. 전체에서는 나누지 않는다.
-    lfChips.hidden = kind !== '분실물'; catChips.hidden = kind === '전체';
-    lfChips.replaceChildren(...[['전체', '전체'], ['분실', '분실'], ['습득', '발견']].map(([v, name]) => {
-      const n = rows.filter(r => r.kind === '분실물' && (status === '전체' || r.status === status) && (cat === '전체' || r.category === cat) && (v === '전체' || r.lostFound === v)).length;
-      return h('button', { class: `chip ${lf === v ? 'on' : ''}`, onClick: () => { lf = v; draw(); } }, `${name} ${n}`);
-    }));
-    catChips.replaceChildren(...['전체', ...catNames()].map(c => {
-      const n = rows.filter(r => (kind === '전체' || r.kind === kind) && (status === '전체' || r.status === status) && (lf === '전체' || r.lostFound === lf) && (c === '전체' || r.category === c)).length;
-      return h('button', { class: `chip ${cat === c ? 'on' : ''}`, onClick: () => { cat = c; draw(); } }, `${c} ${n}`);
-    }));
-    chips.replaceChildren(...['전체', ...STATUSES].map(s => {
-      const n = rows.filter(r => (kind === '전체' || r.kind === kind) && (cat === '전체' || r.category === cat) && (lf === '전체' || r.lostFound === lf) && (s === '전체' || r.status === s)).length;
-      return h('button', { class: `chip ${status === s ? 'on' : ''}`, onClick: () => { status = s; draw(); } }, `${s} ${n}`);
-    }));
+    // 큰 구분은 세그먼트 한 줄. 분실/발견·항목은 시설 지원·분실물 탭을 눌렀을 때만 나오고, 전체에서는 나누지 않는다.
+    kindSeg.replaceChildren(segOf('fseg', ['전체', '하자', '분실물'].map(k => [k, kindName(k)]), kind, k => { kind = k; cat = '전체'; lf = '전체'; draw(); }));
+    lfChips.hidden = kind !== '분실물';
+    lfChips.replaceChildren(segOf('fseg sub', [['전체', '전체'], ['분실', '분실'], ['습득', '발견']], lf, v => { lf = v; draw(); }));
+    const base = r => (kind === '전체' || r.kind === kind) && (lf === '전체' || r.lostFound === lf);
+    const cnt = f => rows.filter(r => hit(r, q) && base(r) && f(r)).length;
+    const filters = [];
+    if (kind !== '전체') filters.push(sel('항목', cat, [['전체', '전체', cnt(r => status === '전체' || r.status === status)], ...catNames().map(c => [c, c, cnt(r => r.category === c && (status === '전체' || r.status === status))])], v => { cat = v; draw(); }));
+    filters.push(sel('상태', status, [['전체', '전체', cnt(r => cat === '전체' || r.category === cat)], ...STATUSES.map(st => [st, st, cnt(r => r.status === st && (cat === '전체' || r.category === cat))])], v => { status = v; draw(); }));
+    chips.replaceChildren(...filters);
   }
   function draw() {
     drawChips();
@@ -164,7 +164,7 @@ export function board() {
   async function refresh() {
     try { rows = await api.list(); draw(); } catch { if (!rows.length) list.replaceChildren(h('div', { class: 'empty' }, h('b', {}, '불러오지 못했어요'), '서버가 켜져 있는지 확인해 주세요.')); }
   }
-  root.append(h('div', { class: 'topbar head2' }, h('div', {}, h('h1', {}, '접수현황'), h('p', { class: 'sub' }, '지금까지 접수된 시설 지원·분실물 신고예요. 누구나 볼 수 있어요.'))), h('div', { class: 'searchrow' }, search), kindSeg, lfChips, catChips, chips, list);
+  root.append(h('div', { class: 'topbar head2' }, h('div', {}, h('h1', {}, '접수현황'), h('p', { class: 'sub' }, '지금까지 접수된 시설 지원·분실물 신고예요. 누구나 볼 수 있어요.'))), h('div', { class: 'searchrow' }, search), kindSeg, lfChips, chips, list);
   list.replaceChildren(h('div', { class: 'empty' }, '불러오는 중…'));
   refresh().then(() => { nav.justAdded = null; });
   timer = setInterval(refresh, 15000);

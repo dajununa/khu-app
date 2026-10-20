@@ -7,12 +7,19 @@ create sequence if not exists public.report_seq_l;
 create sequence if not exists public.report_seq_r;
 alter table public.reports add column if not exists code text;
 
+-- 접수 종류 -> 접두사. 한글 글자를 SQL 에 직접 쓰지 않고 글자 코드로 비교한다
+-- (붙여넣을 때 한글이 다른 형태로 바뀌어도 틀리지 않게)
+create or replace function public.report_prefix(k text, lf text)
+returns text language sql immutable as $$
+  select case when normalize(k, nfc) = chr(54616)||chr(51088) then 'r' when normalize(lf, nfc) = chr(49845)||chr(46301) then 'f' else 'l' end;
+$$;
+
 -- 번호가 생기기 전에 접수된 글: 접수 순서대로 번호를 붙인다
 do $$
 declare r record; p text; n bigint;
 begin
   for r in select id, kind, lost_found from public.reports where code is null order by created_at loop
-    p := case when r.kind = '하자' then 'r' when r.lost_found = '습득' then 'f' else 'l' end;
+    p := public.report_prefix(r.kind, r.lost_found);
     n := nextval('public.report_seq_' || p);
     update public.reports set code = upper(p) || '-' || lpad(n::text, 3, '0') where id = r.id;
   end loop;
@@ -24,7 +31,7 @@ create or replace function public.set_report_code()
 returns trigger language plpgsql security definer set search_path = public as $$
 declare p text;
 begin
-  p := case when new.kind = '하자' then 'r' when new.lost_found = '습득' then 'f' else 'l' end;
+  p := public.report_prefix(new.kind, new.lost_found);
   new.code := upper(p) || '-' || lpad(nextval('public.report_seq_' || p)::text, 3, '0');
   return new;
 end $$;

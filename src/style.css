@@ -301,3 +301,16 @@ textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
 .code { flex: none; font-weight: 800; font-size: 12px; letter-spacing: .02em; padding: 2px 8px; border-radius: 6px; border: 1.5px solid var(--ink); color: var(--ink); background: var(--surface); }
 
 .chips[hidden] { display: none; }
+
+/* 접수현황 필터: 큰 구분 세그먼트 + 분실/발견 세그먼트 + 항목·상태 드롭다운 */
+.fwrap { padding: 0 16px 10px; }
+.fwrap[hidden] { display: none; }
+.fseg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; background: var(--line); border-radius: 12px; padding: 3px; }
+.fseg button { border: 0; background: transparent; padding: 9px 4px; border-radius: 10px; font-weight: 700; font-size: 14px; color: var(--muted); }
+.fseg button.on { background: var(--surface); color: var(--ink); box-shadow: 0 1px 3px #0002; }
+.fseg.sub { border-radius: 10px; }
+.fseg.sub button { padding: 6px 4px; font-size: 13px; border-radius: 8px; }
+.frow { display: flex; gap: 8px; padding: 0 16px 10px; }
+.fsel { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; border: 1px solid var(--line); background: var(--surface); border-radius: 12px; padding: 0 10px 0 12px; }
+.fsel span { flex: none; font-size: 12px; font-weight: 700; color: var(--muted); }
+.fsel select { flex: 1; min-width: 0; border: 0; background: transparent; padding: 10px 0; font-size: 14px; font-weight: 600; color: var(--ink); }
