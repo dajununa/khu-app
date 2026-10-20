@@ -349,3 +349,5 @@ textarea.sm { resize: vertical; min-height: 54px; }
 .phoneline { margin: 6px 0 10px; font-size: 14px; }
 .phoneline a { color: var(--ink); font-weight: 700; }
 .phoneline small { color: var(--muted); font-size: 12px; }
+
+.sm::placeholder { color: var(--muted); opacity: .55; }

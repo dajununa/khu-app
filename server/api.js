@@ -56,7 +56,7 @@ const readBody = (req) => new Promise((res, rej) => {
 });
 const send = (res, code, obj) => { res.statusCode = code; res.setHeader('Content-Type', 'application/json; charset=utf-8'); res.end(JSON.stringify(obj)); };
 const str = (v, max) => String(v ?? '').slice(0, max);
-const cleanPhone = v => { const t = String(v ?? '').replace(/[\s]/g, ''); return /^[0-9-]{9,15}$/.test(t) ? t : ''; };
+const cleanPhone = v => { const t = String(v ?? '').replace(/[\s]/g, ''); return /^010-\d{3,4}-\d{4}$/.test(t) ? t : ''; };
 const pub = ({ ownerPin, phone, ...r }) => (r.phonePublic && phone ? { ...r, phone } : r); // 작성자 PIN, 비공개 전화번호는 응답에 싣지 않는다
 const okAdmin = req => req.headers['x-admin-pin'] === ADMIN_PIN;
 const okOwner = (req, r) => !!r.ownerPin && req.headers['x-owner-pin'] === r.ownerPin;

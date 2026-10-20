@@ -36,13 +36,29 @@ export function report() {
   const isLost = draft.kind === '분실물';
   const itemIn = h('textarea', { class: 'sm', rows: 2, maxlength: 200, placeholder: '예: 검은색 가죽 지갑, 안에 학생증이 있어요', onInput: () => { draft.itemDesc = itemIn.value; } });
   itemIn.value = draft.itemDesc || '';
-  const phoneIn = h('input', { class: 'sm', type: 'tel', inputmode: 'tel', maxlength: 15, autocomplete: 'off', placeholder: '010-0000-0000', 'aria-label': '전화번호 (선택)' });
+  const phoneIn = h('input', { class: 'sm', type: 'tel', inputmode: 'numeric', maxlength: 13, autocomplete: 'off', placeholder: '010-xxxx-xxxx', 'aria-label': '전화번호 (선택)' });
   phoneIn.value = draft.phone || '';
+  // 010- 은 미리 채워 두고, 그 뒤 숫자만 받는다. 3자리 뒤에 대시가 붙고, 4자리째를 치면 4-4 로, 7자리에서 멈추면 3-4 로 정리된다.
+  const phoneDigits = v => { let d = v.replace(/\D/g, ''); if (d.startsWith('010')) d = d.slice(3); return d.slice(0, 8); };
+  const phoneFormat = (d, typing) => {
+    const n = d.length;
+    if (n <= 3) return d + (typing && n === 3 ? '-' : '');
+    if (n === 7) return `${d.slice(0, 3)}-${d.slice(3)}`;
+    return `${d.slice(0, 4)}-${d.slice(4)}`;
+  };
+  const phoneValue = () => { const d = phoneDigits(phoneIn.value); return d ? `010-${phoneFormat(d, false)}` : ''; };
+  phoneIn.addEventListener('focus', () => { if (!phoneIn.value) phoneIn.value = '010-'; });
+  phoneIn.addEventListener('blur', () => { if (!phoneDigits(phoneIn.value)) { phoneIn.value = ''; draft.phone = ''; syncPhone(); } });
   const visSeg = h('div', { class: 'seg sm' }, ...[[true, '전체 공개'], [false, '비공개 (관리자만)']].map(([v, t]) => h('button', { type: 'button', class: draft.phonePublic === v ? 'on' : '', 'data-v': String(v),
     onClick: () => { draft.phonePublic = v; [...visSeg.children].forEach(b => b.classList.toggle('on', b.dataset.v === String(v))); } }, t)));
   const visWrap = h('div', { class: 'visrow' }, visSeg, h('small', {}, '전체 공개면 접수현황에서 누구나 볼 수 있어요.'));
-  const syncPhone = () => { visWrap.hidden = !phoneIn.value.trim(); };
-  phoneIn.addEventListener('input', () => { phoneIn.value = phoneIn.value.replace(/[^0-9-]/g, ''); draft.phone = phoneIn.value; syncPhone(); });
+  const syncPhone = () => { visWrap.hidden = !phoneDigits(phoneIn.value); };
+  phoneIn.addEventListener('input', e => {
+    const d = phoneDigits(phoneIn.value), deleting = /^delete/.test(e.inputType || '');
+    let f = `010-${phoneFormat(d, !deleting)}`;
+    if (deleting && f.endsWith('-') && d.length) f = f.slice(0, -1); // 지울 때는 끝의 대시를 다시 붙이지 않는다
+    phoneIn.value = f; draft.phone = phoneValue(); syncPhone();
+  });
   syncPhone();
 
   const pinIn = h('input', { class: 'pin4', type: 'password', inputmode: 'numeric', pattern: '[0-9]*', maxlength: 4, autocomplete: 'off', placeholder: '숫자 4자리', 'aria-label': '수정·삭제용 PIN 4자리' });
@@ -91,9 +107,9 @@ export function report() {
     const detail = ta.value.trim();
     if (found && !draft.foundAction) { toast('물건을 어떻게 했는지 골라 주세요.'); foundSeg.scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
     if (!draft.category) { toast('항목을 먼저 골라 주세요.'); catsEl.scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
-    const itemDesc = itemIn.value.trim(), phone = phoneIn.value.replace(/\s/g, '');
+    const itemDesc = itemIn.value.trim(), phone = phoneValue();
     if (isLost && !itemDesc) { toast('물품 설명을 적어 주세요.'); itemIn.focus(); return; }
-    if (isLost && phone && !/^[0-9-]{9,15}$/.test(phone)) { toast('전화번호를 다시 확인해 주세요.'); phoneIn.focus(); return; }
+    if (isLost && phone && !/^010-\d{3,4}-\d{4}$/.test(phone)) { toast('전화번호를 다시 확인해 주세요.'); phoneIn.focus(); return; }
     if (!isLost && draft.category === '기타' && !detail) { toast('기타는 내용을 적어 주세요.'); ta.focus(); return; }
     if (!/^\d{4}$/.test(pinIn.value)) { toast('수정·삭제용 PIN 숫자 4자리를 입력해 주세요.'); pinIn.focus(); return; }
     submit.disabled = true; submit.textContent = '접수 중…';
