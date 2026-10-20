@@ -154,3 +154,16 @@ drop trigger if exists reports_set_code on public.reports;
 create trigger reports_set_code before insert on public.reports for each row execute function public.set_report_code();
 
 notify pgrst, 'reload schema';
+
+-- 접수 후 30일이 지나면 자동 삭제 (매일 새벽 4시 = 한국시간 오후 1시). 이 부분만 따로 실행해도 됩니다.
+-- 앱도 30일 지난 글은 목록에서 빼기 때문에, 아래 예약 작업이 안 돼도 화면에는 보이지 않습니다.
+-- ※ 사진 파일(Storage)은 SQL 로 지울 수 없어 남습니다. 필요하면 Storage > reports 에서 정리하세요.
+create or replace function public.purge_old_reports()
+returns void language sql security definer set search_path = public as $$
+  delete from public.reports where created_at < now() - interval '30 days';
+$$;
+revoke execute on function public.purge_old_reports() from anon, authenticated, public;
+
+create extension if not exists pg_cron;
+select cron.unschedule(jobid) from cron.job where jobname = 'purge-old-reports';
+select cron.schedule('purge-old-reports', '0 4 * * *', 'select public.purge_old_reports()');

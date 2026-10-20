@@ -89,7 +89,7 @@ export async function openTour(host, opts, cb) {
   const pinBtn = h('button', { class: 'btn' }, '📍 핀하기');
   const top = h('div', { class: 't-top' }, h('button', { class: 'iconbtn', 'aria-label': '닫기', onClick: () => cb.onClose() }, h('svg', { viewBox: '0 0 24 24' }, h('path', { d: 'M15 5l-7 7 7 7' }))), h('div', {}, title, sub));
   const bottom = h('div', { class: 't-bottom' },
-    opts.mode === 'pin' ? [h('small', {}, '화면을 드래그해 하자 위치를 찾고, 십자선에 맞춰 핀하세요'), pinBtn] : [h('small', {}, '빨간 핀이 신고된 위치예요')]);
+    opts.mode === 'pin' ? [h('small', {}, '화면을 드래그해 문제 위치를 찾고, 십자선에 맞춰 핀하세요'), pinBtn] : [h('small', {}, '빨간 핀이 신고된 위치예요')]);
   const pinMark = opts.mode === 'view' ? h('div', { class: 'pinmark' }, pinIcon()) : null;
   const ui = [loader, top, arrowsEl, opts.mode === 'pin' ? h('div', { class: 'cross' }, h('i')) : null, pinMark, bottom].filter(Boolean);
   ui.forEach(n => host.append(n));

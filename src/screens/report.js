@@ -1,7 +1,7 @@
 import { h, toast, shrinkImage } from '../lib/dom.js';
 import { api } from '../lib/api.js';
 import { draft, resetDraft, nav, getWaypoints } from '../lib/state.js';
-import { CATEGORIES } from '../data/config.js';
+import { CATEGORIES, kindName } from '../data/config.js';
 
 const NEAR_M = 1;
 const likedSet = () => { try { return JSON.parse(localStorage.getItem('khu_liked') || '[]'); } catch { return []; } };
@@ -17,13 +17,13 @@ export function report() {
   if (!draft.pin) { location.hash = '#/'; return h('div'); }
   const root = h('div', {});
   const back = h('button', { class: 'iconbtn', 'aria-label': '뒤로', onClick: () => history.back() }, h('svg', { viewBox: '0 0 24 24' }, h('path', { d: 'M15 5l-7 7 7 7' })));
-  root.append(h('div', { class: 'topbar' }, back, h('h1', {}, draft.kind === '분실물' ? (draft.lostFound === '습득' ? '습득 신고' : '분실 신고') : `${draft.kind} 신고`)));
+  root.append(h('div', { class: 'topbar' }, back, h('h1', {}, draft.kind === '분실물' ? (draft.lostFound === '습득' ? '습득 신고' : '분실 신고') : `${kindName(draft.kind)} 신고`)));
 
   // 항목(한 단어) 선택. 하자/분실물은 첫 화면에서 이미 골랐다
   const catsEl = h('div', { class: 'cats', role: 'radiogroup', 'aria-label': '항목 선택' });
   const catLbl = h('span', { class: 'lbl' });
   function drawCats() {
-    catLbl.textContent = draft.kind === '하자' ? '어떤 하자인가요?' : draft.lostFound === '습득' ? '어떤 물건을 주웠나요?' : '어떤 물건을 잃어버렸나요?';
+    catLbl.textContent = draft.kind === '하자' ? '어떤 시설 지원이 필요한가요?' : draft.lostFound === '습득' ? '어떤 물건을 주웠나요?' : '어떤 물건을 잃어버렸나요?';
     catsEl.replaceChildren(...CATEGORIES[draft.kind].map(([name, icon]) => h('button', { type: 'button', role: 'radio', 'aria-checked': String(draft.category === name), class: `cat ${draft.category === name ? 'on' : ''}`,
       onClick: () => { draft.category = name; drawCats(); } }, h('span', { class: 'ic' }, icon), name)));
     ta.placeholder = draft.category === '기타' ? '어떤 내용인지 적어 주세요' : '필요하면 자세한 내용을 적어 주세요 (선택)';
@@ -41,7 +41,7 @@ export function report() {
   input.addEventListener('change', async () => { const f = input.files[0]; if (!f) return; try { draft.photo = await shrinkImage(f); renderPhoto(); } catch (e) { toast(e.message); } });
   renderPhoto();
 
-  // 핀 주변 1m 안에 이미 신고된 하자가 있으면 사진과 함께 보여 준다
+  // 핀 주변 1m 안에 이미 신고된 시설 지원 건이 있으면 사진과 함께 보여 준다
   const nearBox = h('div', { class: 'near', hidden: true });
   if (draft.kind === '하자') {
     Promise.all([api.list(), getWaypoints()]).then(([rows, wps]) => {

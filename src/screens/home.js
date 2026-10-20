@@ -1,6 +1,6 @@
 import { h } from '../lib/dom.js';
 import { draft } from '../lib/state.js';
-import { FLOORS, SCANNED, STAIR_PAIRS, STAIR_SCANNED, stairName } from '../data/config.js';
+import { FLOORS, SCANNED, STAIR_PAIRS, STAIR_SCANNED, stairName, kindName } from '../data/config.js';
 
 // 도움말: 새 화면이 아니라 홈 위에 작은 창으로 뜬다
 function openHelp() {
@@ -27,12 +27,12 @@ function openHelp() {
 export function choose() {
   const pick = kind => { Object.assign(draft, { kind, category: '', pin: null, shot: null, label: '', foundAction: '', lostFound: '분실' }); location.hash = kind === '분실물' ? '#/lost' : '#/building'; };
   const big = (kind, icon, desc) => h('button', { class: 'bigchoice', type: 'button', onClick: () => pick(kind) },
-    h('span', { class: 'ic' }, icon), h('b', {}, `${kind} 신고`), h('small', {}, desc));
+    h('span', { class: 'ic' }, icon), h('b', {}, `${kindName(kind)} 신고`), h('small', {}, desc));
   return h('div', { class: 'choose' },
     h('div', { class: 'home-head' },
       h('div', { class: 'kickrow' }, h('div', { class: 'kicker' }, '경희대학교 · 생활과학대학'), h('button', { class: 'helpbtn', type: 'button', 'aria-haspopup': 'dialog', onClick: openHelp }, h('span', { class: 'q' }, '?'), '도움말')),
       h('h1', {}, '무엇을 신고할까요?')),
-    h('div', { class: 'choices' }, big('하자', '🛠️', '누수·조명·파손 등 건물 고장'), big('분실물', '🎒', '잃어버렸거나 주운 물건')));
+    h('div', { class: 'choices' }, big('하자', '🛠️', '누수·조명·파손 등 시설 문제'), big('분실물', '🎒', '잃어버렸거나 주운 물건')));
 }
 
 const backTop = title => h('div', { class: 'topbar' }, h('button', { class: 'iconbtn', 'aria-label': '뒤로', onClick: () => history.back() }, h('svg', { viewBox: '0 0 24 24' }, h('path', { d: 'M15 5l-7 7 7 7' }))), h('h1', {}, title));
@@ -109,8 +109,8 @@ export function home() {
   return h('div', { class: 'home' },
     h('div', { class: 'home-head' },
       h('div', { class: 'kickrow' }, h('div', { class: 'kicker' }, '경희대학교 · 생활과학대학'), h('button', { class: 'helpbtn', type: 'button', 'aria-haspopup': 'dialog', onClick: openHelp }, h('span', { class: 'q' }, '?'), '도움말')),
-      h('h1', {}, draft.kind === '분실물' ? (draft.lostFound === '습득' ? '습득 신고' : '분실 신고') : `${draft.kind} 신고`),
-      h('p', { class: 'lead' }, draft.kind === '분실물' ? (draft.lostFound === '습득' ? '습득 신고 · 주운 곳을 3D 스캔에서 찍어 주세요. ' : '분실 신고 · 잃어버린 곳을 3D 스캔에서 찍어 주세요. ') : `${draft.kind} 신고 · 3D 스캔에서 위치를 찍어 신고해요. `, h('b', {}, '아래에서 층을 눌러 주세요.'))),
+      h('h1', {}, draft.kind === '분실물' ? (draft.lostFound === '습득' ? '습득 신고' : '분실 신고') : `${kindName(draft.kind)} 신고`),
+      h('p', { class: 'lead' }, draft.kind === '분실물' ? (draft.lostFound === '습득' ? '습득 신고 · 주운 곳을 3D 스캔에서 찍어 주세요. ' : '분실 신고 · 잃어버린 곳을 3D 스캔에서 찍어 주세요. ') : `${kindName(draft.kind)} 신고 · 3D 스캔에서 위치를 찍어 신고해요. `, h('b', {}, '아래에서 층을 눌러 주세요.'))),
     svg,
     h('div', { class: 'legend' }, h('span', {}, '● 표시가 있는 층은 3D 스캔으로 신고할 수 있어요')),
   );

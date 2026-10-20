@@ -19,8 +19,14 @@ const nextCode = (rows, r) => {
   const n = Math.max(c[p] || 0, floor) + 1; c[p] = n; fs.writeFileSync(COUNTERS, JSON.stringify(c));
   return `${p}-${String(n).padStart(3, '0')}`;
 };
+const KEEP_DAYS = 30; // 접수 후 30일이 지난 글은 사진과 함께 자동 삭제
 const load = () => {
   let rows; try { rows = JSON.parse(fs.readFileSync(DB, 'utf8')); } catch { return []; }
+  const cutoff = Date.now() - KEEP_DAYS * 86400000, old = rows.filter(r => new Date(r.createdAt).getTime() < cutoff);
+  if (old.length) {
+    for (const r of old) for (const u of [r.photo, r.shot, r.afterPhoto]) if (u) fs.rmSync(path.join(UPLOADS, path.basename(u)), { force: true });
+    rows = rows.filter(r => !old.includes(r)); fs.writeFileSync(DB, JSON.stringify(rows, null, 1));
+  }
   const missing = rows.filter(r => !r.code); // 번호가 생기기 전에 접수된 글은 접수 순서대로 번호를 붙인다
   if (missing.length) { missing.sort((a, b) => a.createdAt.localeCompare(b.createdAt)).forEach(r => { r.code = nextCode(rows, r); }); fs.writeFileSync(DB, JSON.stringify(rows, null, 1)); }
   return rows;

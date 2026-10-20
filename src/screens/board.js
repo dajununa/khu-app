@@ -1,10 +1,10 @@
 import { h, toast, ago, fullTime, shrinkImage } from '../lib/dom.js';
 import { api } from '../lib/api.js';
-import { STATUSES, CATEGORIES } from '../data/config.js';
+import { STATUSES, CATEGORIES, kindName } from '../data/config.js';
 import { goTour, nav } from '../lib/state.js';
 
 const sIdx = s => STATUSES.indexOf(s);
-const tagText = r => (r.kind === '분실물' ? `${r.lostFound || '분실물'} · ${r.category || '기타'}${r.pin?.found === 'office' ? ' · 행정실 보관' : r.pin?.found === 'left' ? ' · 그 자리' : ''}` : (r.category || r.kind));
+const tagText = r => (r.kind === '분실물' ? `${r.lostFound === '습득' ? '발견' : r.lostFound || '분실물'} · ${r.category || '기타'}${r.pin?.found === 'office' ? ' · 행정실 보관' : r.pin?.found === 'left' ? ' · 그 자리' : ''}` : (r.category || r.kind));
 const likedSet = () => { try { return JSON.parse(localStorage.getItem('khu_liked') || '[]'); } catch { return []; } };
 const liked = id => likedSet().includes(id);
 const setLiked = (id, on) => { try { localStorage.setItem('khu_liked', JSON.stringify(on ? [...new Set([...likedSet(), id])] : likedSet().filter(x => x !== id))); } catch {} };
@@ -39,25 +39,32 @@ const hit = (r, q) => {
 const badge = s => h('span', { class: `badge s-${sIdx(s)}` }, s);
 
 export function board() {
-  let rows = [], kind = '전체', status = '전체', cat = '전체', q = '', timer;
+  let rows = [], kind = '전체', status = '전체', cat = '전체', lf = '전체', q = '', timer;
   const root = h('div', {});
   const list = h('div', { class: 'list' });
   const chips = h('div', { class: 'chips', role: 'tablist' });
   const kindSeg = h('div', { class: 'chips' });
   const search = h('input', { class: 'search', type: 'search', placeholder: '관리번호(예: F-012) 또는 내용 검색', 'aria-label': '검색', autocomplete: 'off' });
   search.addEventListener('input', () => { q = search.value; draw(); });
+  const lfChips = h('div', { class: 'chips', 'aria-label': '분실·발견' });
   const catChips = h('div', { class: 'chips', 'aria-label': '항목' });
   const catNames = () => [...new Set((kind === '전체' ? Object.values(CATEGORIES).flat() : CATEGORIES[kind]).map(c => c[0]))];
-  const match = r => hit(r, q) && (kind === '전체' || r.kind === kind) && (status === '전체' || r.status === status) && (cat === '전체' || r.category === cat);
+  const match = r => hit(r, q) && (kind === '전체' || r.kind === kind) && (status === '전체' || r.status === status) && (cat === '전체' || r.category === cat) && (lf === '전체' || r.lostFound === lf);
 
   function drawChips() {
-    kindSeg.replaceChildren(...['전체', '하자', '분실물'].map(k => h('button', { class: `chip ${kind === k ? 'on' : ''}`, onClick: () => { kind = k; cat = '전체'; draw(); } }, k)));
+    kindSeg.replaceChildren(...['전체', '하자', '분실물'].map(k => h('button', { class: `chip ${kind === k ? 'on' : ''}`, onClick: () => { kind = k; cat = '전체'; lf = '전체'; draw(); } }, kindName(k))));
+    // 세부 선택(분실/발견, 항목)은 하자·분실물 탭을 눌렀을 때만 나온다. 전체에서는 나누지 않는다.
+    lfChips.hidden = kind !== '분실물'; catChips.hidden = kind === '전체';
+    lfChips.replaceChildren(...[['전체', '전체'], ['분실', '분실'], ['습득', '발견']].map(([v, name]) => {
+      const n = rows.filter(r => r.kind === '분실물' && (status === '전체' || r.status === status) && (cat === '전체' || r.category === cat) && (v === '전체' || r.lostFound === v)).length;
+      return h('button', { class: `chip ${lf === v ? 'on' : ''}`, onClick: () => { lf = v; draw(); } }, `${name} ${n}`);
+    }));
     catChips.replaceChildren(...['전체', ...catNames()].map(c => {
-      const n = rows.filter(r => (kind === '전체' || r.kind === kind) && (status === '전체' || r.status === status) && (c === '전체' || r.category === c)).length;
+      const n = rows.filter(r => (kind === '전체' || r.kind === kind) && (status === '전체' || r.status === status) && (lf === '전체' || r.lostFound === lf) && (c === '전체' || r.category === c)).length;
       return h('button', { class: `chip ${cat === c ? 'on' : ''}`, onClick: () => { cat = c; draw(); } }, `${c} ${n}`);
     }));
     chips.replaceChildren(...['전체', ...STATUSES].map(s => {
-      const n = rows.filter(r => (kind === '전체' || r.kind === kind) && (cat === '전체' || r.category === cat) && (s === '전체' || r.status === s)).length;
+      const n = rows.filter(r => (kind === '전체' || r.kind === kind) && (cat === '전체' || r.category === cat) && (lf === '전체' || r.lostFound === lf) && (s === '전체' || r.status === s)).length;
       return h('button', { class: `chip ${status === s ? 'on' : ''}`, onClick: () => { status = s; draw(); } }, `${s} ${n}`);
     }));
   }
@@ -67,7 +74,7 @@ export function board() {
     list.replaceChildren(...(shown.length ? shown.map(card) : [h('div', { class: 'empty' }, h('b', {}, '접수된 내용이 없어요'), q ? '검색 결과가 없어요. 관리번호를 다시 확인해 보세요.' : '홈에서 층을 골라 첫 신고를 남겨 보세요.')]));
   }
   function card(r) {
-    const img = r.photo || r.shot; // 직접 올린 사진이 있으면 그것을 먼저
+    const img = r.photo; // 썸네일은 항상 사용자가 올린 사진 (없으면 '사진 없음')
     const el = h('button', { class: `item ${nav.justAdded === r.id ? 'new' : ''}`, onClick: () => openSheet(r) },
       img ? shotView(r, img, 'th', '') : h('div', { class: 'th none' }, '사진 없음'),
       h('div', { class: 'body' },
@@ -150,14 +157,14 @@ export function board() {
       if (!confirm('이 신고를 삭제할까요? 되돌릴 수 없어요.')) return;
       try { await api.remove(r.id, pin, true); rows = rows.filter(x => x.id !== r.id); draw(); bg.remove(); toast('삭제했어요.'); } catch (e) { toast(e.message); } } }, '🗑 이 글 삭제');
     sheet.append(h('div', { class: 'grab' }), h('h2', { style: 'font-size:18px;margin:8px 0 12px' }, '내 글 수정'),
-      h('div', { class: 'form' }, h('div', {}, h('span', { class: 'lbl' }, r.kind === '하자' ? '어떤 하자인가요?' : '어떤 물건인가요?'), cats), h('div', {}, lf),
+      h('div', { class: 'form' }, h('div', {}, h('span', { class: 'lbl' }, r.kind === '하자' ? '어떤 시설 지원이 필요한가요?' : '어떤 물건인가요?'), cats), h('div', {}, lf),
         h('div', {}, h('span', { class: 'lbl' }, '직접 찍은 사진'), photoBox), h('div', {}, h('span', { class: 'lbl' }, '세부 내용'), ta), save, del));
     drawCats(); renderPhoto(); bg.append(sheet);
   }
   async function refresh() {
     try { rows = await api.list(); draw(); } catch { if (!rows.length) list.replaceChildren(h('div', { class: 'empty' }, h('b', {}, '불러오지 못했어요'), '서버가 켜져 있는지 확인해 주세요.')); }
   }
-  root.append(h('div', { class: 'topbar head2' }, h('div', {}, h('h1', {}, '접수현황'), h('p', { class: 'sub' }, '지금까지 접수된 하자·분실물 신고예요. 누구나 볼 수 있어요.'))), h('div', { class: 'searchrow' }, search), kindSeg, catChips, chips, list);
+  root.append(h('div', { class: 'topbar head2' }, h('div', {}, h('h1', {}, '접수현황'), h('p', { class: 'sub' }, '지금까지 접수된 시설 지원·분실물 신고예요. 누구나 볼 수 있어요.'))), h('div', { class: 'searchrow' }, search), kindSeg, lfChips, catChips, chips, list);
   list.replaceChildren(h('div', { class: 'empty' }, '불러오는 중…'));
   refresh().then(() => { nav.justAdded = null; });
   timer = setInterval(refresh, 15000);

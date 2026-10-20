@@ -33,7 +33,7 @@ async function upload(dataUrl) {
   return `${SB}/storage/v1/object/public/reports/${name}`;
 }
 const remote = {
-  list: () => fetch(`${SB}/rest/v1/reports?select=*&order=created_at.desc&limit=300`, { headers: H() }).then(j).then(rows => rows.map(fromRow)),
+  list: () => fetch(`${SB}/rest/v1/reports?select=*&created_at=gte.${encodeURIComponent(new Date(Date.now() - 30 * 86400000).toISOString())}&order=created_at.desc&limit=300`, { headers: H() }).then(j).then(rows => rows.map(fromRow)),
   async create(b) {
     const [photo, shot] = await Promise.all([upload(b.photo), upload(b.shot)]);
     const body = { kind: b.kind, category: (b.category || '기타').slice(0, 20), lost_found: b.lostFound || null, detail: (b.detail || '').slice(0, 1000), location_label: (b.locationLabel || '').slice(0, 80), pin: b.pin || {}, photo, shot };
