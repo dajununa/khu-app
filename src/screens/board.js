@@ -52,7 +52,7 @@ export function board() {
   const search = h('input', { class: 'search', type: 'search', placeholder: '관리번호(예: F-012) 또는 내용 검색', 'aria-label': '검색', autocomplete: 'off' });
   search.addEventListener('input', () => { q = search.value; draw(); });
   const catNames = () => (kind === '전체' ? [] : CATEGORIES[kind].map(c => c[0]));
-  // 처리 상태 필터: 분실물 탭은 접수완료/반환완료, 시설 지원 탭은 4단계, 전체 탭은 처리 중/완료
+  // 처리 상태 필터: 분실물 탭은 접수완료/반환완료, 안전 신고 탭은 4단계, 전체 탭은 처리 중/완료
   const stMatch = r => status === '전체' || (kind === '하자' ? r.status === status : (kind === '분실물' ? status === '반환완료' : status === '완료') ? r.status === '완료' : r.status !== '완료');
   const statusOpts = () => (kind === '분실물' ? LOST_STEPS : kind === '하자' ? STATUSES : ['처리 중', '완료']);
   const match = r => hit(r, q) && (kind === '전체' || r.kind === kind) && stMatch(r) && (cat === '전체' || r.category === cat) && (lf === '전체' || r.lostFound === lf);
@@ -69,7 +69,7 @@ export function board() {
     status !== '전체' && [status, () => { status = '전체'; }],
   ].filter(Boolean);
   function drawChips() {
-    tabs.replaceChildren(...['전체', '하자', '분실물'].map(k => h('button', { type: 'button', role: 'tab', class: kind === k ? 'on' : '', 'aria-selected': String(kind === k), onClick: () => { kind = k; reset(); draw(); } }, kindName(k))));
+    tabs.replaceChildren(...['전체', '하자', '분실물'].map(k => h('button', { type: 'button', role: 'tab', class: kind === k ? 'on' : '', 'aria-selected': String(kind === k), onClick: () => { kind = k; reset(); draw(); } }, k === '하자' ? '안전 신고' : kindName(k))));
     const act = activeTags();
     filterBtn.replaceChildren(...[h('svg', { viewBox: '0 0 24 24' }, h('path', { d: 'M4 6h16M7 12h10M10 18h4' })), '필터', act.length ? h('b', {}, String(act.length)) : null].filter(Boolean));
     tags.hidden = !act.length;
@@ -212,14 +212,14 @@ export function board() {
       if (!confirm('이 신고를 삭제할까요? 되돌릴 수 없어요.')) return;
       try { await api.remove(r.id, pin, true); rows = rows.filter(x => x.id !== r.id); draw(); bg.remove(); toast('삭제했어요.'); } catch (e) { toast(e.message); } } }, '🗑 이 글 삭제');
     sheet.append(h('div', { class: 'grab' }), h('h2', { style: 'font-size:18px;margin:8px 0 12px' }, '내 글 수정'),
-      h('div', { class: 'form' }, h('div', {}, h('span', { class: 'lbl' }, r.kind === '하자' ? '어떤 시설 지원이 필요한가요?' : '어떤 물건인가요?'), cats), h('div', {}, lf),
+      h('div', { class: 'form' }, h('div', {}, h('span', { class: 'lbl' }, r.kind === '하자' ? '어떤 안전 문제인가요?' : '어떤 물건인가요?'), cats), h('div', {}, lf),
         h('div', {}, h('span', { class: 'lbl' }, '직접 찍은 사진'), photoBox), h('div', {}, h('span', { class: 'lbl' }, '세부 내용'), ta), save, del));
     drawCats(); renderPhoto(); bg.append(sheet);
   }
   async function refresh() {
     try { rows = await api.list(); draw(); } catch { if (!rows.length) list.replaceChildren(h('div', { class: 'empty' }, h('b', {}, '불러오지 못했어요'), '서버가 켜져 있는지 확인해 주세요.')); }
   }
-  root.append(h('div', { class: 'topbar head2' }, h('div', {}, h('h1', {}, '접수현황'), h('p', { class: 'sub' }, '지금까지 접수된 시설 지원·분실물 신고예요. 누구나 볼 수 있어요.'))), tabs, h('div', { class: 'toolrow' }, search, filterBtn), tags, list);
+  root.append(h('div', { class: 'topbar head2' }, h('div', {}, h('h1', {}, '접수현황'), h('p', { class: 'sub' }, '지금까지 접수된 안전 신고·분실물 신고예요. 누구나 볼 수 있어요.'))), tabs, h('div', { class: 'toolrow' }, search, filterBtn), tags, list);
   list.replaceChildren(h('div', { class: 'empty' }, '불러오는 중…'));
   refresh().then(() => { nav.justAdded = null; });
   timer = setInterval(refresh, 15000);

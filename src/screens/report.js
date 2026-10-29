@@ -23,7 +23,7 @@ export function report() {
   const catsEl = h('div', { class: 'cats', role: 'radiogroup', 'aria-label': '항목 선택' });
   const catLbl = h('span', { class: 'lbl' });
   function drawCats() {
-    catLbl.textContent = draft.kind === '하자' ? '어떤 시설 지원이 필요한가요?' : draft.lostFound === '습득' ? '어떤 물건을 주웠나요?' : '어떤 물건을 잃어버렸나요?';
+    catLbl.textContent = draft.kind === '하자' ? '어떤 안전 문제인가요?' : draft.lostFound === '습득' ? '어떤 물건을 주웠나요?' : '어떤 물건을 잃어버렸나요?';
     catsEl.replaceChildren(...CATEGORIES[draft.kind].map(([name, icon]) => h('button', { type: 'button', role: 'radio', 'aria-checked': String(draft.category === name), class: `cat ${draft.category === name ? 'on' : ''}`,
       onClick: () => { draft.category = name; drawCats(); } }, h('span', { class: 'ic' }, icon), name)));
     ta.placeholder = isLost ? '더 알려 주고 싶은 내용이 있다면 적어 주세요' : draft.category === '기타' ? '어떤 내용인지 적어 주세요' : '필요하면 자세한 내용을 적어 주세요 (선택)';
@@ -70,7 +70,7 @@ export function report() {
   input.addEventListener('change', async () => { const f = input.files[0]; if (!f) return; try { draft.photo = await shrinkImage(f); renderPhoto(); } catch (e) { toast(e.message); } });
   renderPhoto();
 
-  // 핀 주변 1m 안에 이미 신고된 시설 지원 건이 있으면 사진과 함께 보여 준다
+  // 핀 주변 1m 안에 이미 신고된 안전 신고 건이 있으면 사진과 함께 보여 준다
   const nearBox = h('div', { class: 'near', hidden: true });
   if (draft.kind === '하자') {
     Promise.all([api.list(), getWaypoints()]).then(([rows, wps]) => {
