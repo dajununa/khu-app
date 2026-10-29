@@ -15,7 +15,7 @@ const local = {
   setStatus: (id, status, pin) => fetch('/api/reports/' + id, { method: 'PATCH', headers: { 'Content-Type': 'application/json', 'x-admin-pin': pin }, body: JSON.stringify({ status }) }).then(j),
   remove: (id, pin, owner) => fetch('/api/reports/' + id, { method: 'DELETE', headers: { [owner ? 'x-owner-pin' : 'x-admin-pin']: pin } }).then(j),
   getPhone: (id, pin) => fetch(`/api/reports/${id}/phone`, { headers: { 'x-admin-pin': pin } }).then(j),
-  getFound: (id, pin) => fetch(`/api/reports/${id}/found`, { headers: { 'x-admin-pin': pin } }).then(j),
+  getFound: (id, pin, owner) => fetch(`/api/reports/${id}/found`, { headers: { [owner ? 'x-owner-pin' : 'x-admin-pin']: pin } }).then(j),
   verifyOwner: (id, pin) => fetch(`/api/reports/${id}/verify`, { method: 'POST', headers: { 'x-owner-pin': pin } }).then(j),
   update: (id, pin, fields) => fetch('/api/reports/' + id, { method: 'PATCH', headers: { 'Content-Type': 'application/json', 'x-owner-pin': pin }, body: JSON.stringify(fields) }).then(j),
   setAfterPhoto: (id, afterPhoto, pin) => fetch('/api/reports/' + id, { method: 'PATCH', headers: { 'Content-Type': 'application/json', 'x-admin-pin': pin }, body: JSON.stringify({ afterPhoto }) }).then(j),
@@ -38,12 +38,12 @@ const remote = {
   list: () => fetch(`${SB}/rest/v1/reports?select=*&created_at=gte.${encodeURIComponent(new Date(Date.now() - 30 * 86400000).toISOString())}&order=created_at.desc&limit=300`, { headers: H() }).then(j).then(rows => rows.map(fromRow)),
   async create(b) {
     const [photo, shot] = await Promise.all([upload(b.photo), upload(b.shot)]);
-    const hidden = b.kind === '분실물' && b.lostFound === '습득'; // 주운 물건의 사진·위치는 누구나 읽는 표에 두지 않고 관리자만 본다
-    const body = { kind: b.kind, category: (b.category || '기타').slice(0, 20), lost_found: b.lostFound || null, detail: (b.detail || '').slice(0, 1000), item_desc: (b.itemDesc || '').slice(0, 200) || null, phone_public: b.phone && b.phonePublic ? String(b.phone).slice(0, 20) : null, location_label: hidden ? '' : (b.locationLabel || '').slice(0, 80), pin: hidden ? { found: b.pin?.found || '' } : b.pin || {}, photo: hidden ? null : photo, shot: hidden ? null : shot };
+    const hidden = b.kind === '분실물' && b.lostFound === '습득'; // 주운 물건의 사진·위치·세부 내용은 누구나 읽는 표에 두지 않고 관리자만 본다
+    const body = { kind: b.kind, category: (b.category || '기타').slice(0, 20), lost_found: b.lostFound || null, detail: hidden ? '' : (b.detail || '').slice(0, 1000), item_desc: (b.itemDesc || '').slice(0, 200) || null, phone_public: b.phone && b.phonePublic ? String(b.phone).slice(0, 20) : null, location_label: hidden ? '' : (b.locationLabel || '').slice(0, 80), pin: hidden ? { found: b.pin?.found || '' } : b.pin || {}, photo: hidden ? null : photo, shot: hidden ? null : shot };
     const rows = await fetch(`${SB}/rest/v1/reports`, { method: 'POST', headers: H({ 'Content-Type': 'application/json', Prefer: 'return=representation' }), body: JSON.stringify(body) }).then(j);
     const row = fromRow(rows[0]);
     if (hidden) {
-      const fr = await fetch(`${SB}/rest/v1/rpc/set_private_found`, { method: 'POST', headers: H({ 'Content-Type': 'application/json' }), body: JSON.stringify({ rid: row.id, photo_in: photo, shot_in: shot, label_in: (b.locationLabel || '').slice(0, 80), pin_in: b.pin || {} }) });
+      const fr = await fetch(`${SB}/rest/v1/rpc/set_private_found`, { method: 'POST', headers: H({ 'Content-Type': 'application/json' }), body: JSON.stringify({ rid: row.id, photo_in: photo, shot_in: shot, label_in: (b.locationLabel || '').slice(0, 80), pin_in: b.pin || {}, detail_in: (b.detail || '').slice(0, 1000) }) });
       if (!fr.ok) throw new Error('위치와 사진을 저장하지 못했어요. 접수는 되었지만 관리자가 확인할 수 없어요.');
     }
     if (b.phone && !b.phonePublic) { // 비공개 번호는 누구나 읽는 표가 아니라 따로 저장 (관리자만 확인)
@@ -73,8 +73,8 @@ const remote = {
     if (!r.ok) throw new Error('PIN이 올바르지 않습니다.');
     return { phone: (await r.json()) || '' };
   },
-  async getFound(id, pin) {
-    const r = await fetch(`${SB}/rest/v1/rpc/admin_get_found`, { method: 'POST', headers: H({ 'Content-Type': 'application/json' }), body: JSON.stringify({ rid: id, pin_in: pin }) });
+  async getFound(id, pin, owner) {
+    const r = await fetch(`${SB}/rest/v1/rpc/${owner ? 'owner_get_found' : 'admin_get_found'}`, { method: 'POST', headers: H({ 'Content-Type': 'application/json' }), body: JSON.stringify({ rid: id, pin_in: pin }) });
     if (!r.ok) throw new Error('PIN이 올바르지 않습니다.');
     return (await r.json()) || {};
   },

@@ -145,7 +145,7 @@ export function board() {
         admin() ? h('h2', { style: 'font-size:18px;margin-top:8px' }, (hid ? fd()?.label : r.locationLabel) || '위치 정보 없음') : null,
         h('div', { class: `steps ${lost ? 'two' : ''}` }, stepsOf(r).map((st, i) => h('div', { class: i <= stIdx(r) ? 'on' : '' }, st))),
         r.itemDesc ? h('p', { style: 'font-weight:700;margin-bottom:4px' }, r.itemDesc) : null,
-        r.detail ? h('p', { style: r.itemDesc ? 'font-size:14px;color:var(--muted);margin-top:0' : '' }, r.detail) : null,
+        (hid ? fd()?.detail : r.detail) ? h('p', { style: r.itemDesc ? 'font-size:14px;color:var(--muted);margin-top:0' : '' }, hid ? fd().detail : r.detail) : null,
         phoneLine(),
         hid
           ? h('div', { class: 'ba' }, // 주운 물건: 관리자만 물품 사진과 핀한 위치를 본다. 그 밖에는 잠금 안내
@@ -177,17 +177,17 @@ export function board() {
                 catch (e) { toast(e.message); if (/PIN/.test(e.message)) sessionStorage.removeItem('khu_pin'), paint(); } } }, '🗑 이 글 삭제'))
           : h('div', { style: 'display:flex;gap:14px;flex-wrap:wrap' }, h('button', { class: 'linkbtn', onClick: async () => {
               const p = prompt('접수할 때 정한 PIN 4자리를 입력하세요'); if (!p) return;
-              try { await api.verifyOwner(r.id, p.trim()); openEdit(r, p.trim(), bg); } catch (e) { toast(e.message); } } }, '✏️ 내 글 수정·삭제'),
+              try { await api.verifyOwner(r.id, p.trim()); const hf = r.kind === '분실물' && r.lostFound === '습득' ? await api.getFound(r.id, p.trim(), true) : null; openEdit(r, p.trim(), bg, hf); } catch (e) { toast(e.message); } } }, '✏️ 내 글 수정·삭제'),
             h('button', { class: 'linkbtn', onClick: () => { const p = prompt('관리자 PIN을 입력하세요'); if (p) { sessionStorage.setItem('khu_pin', p); adminPhone = undefined; adminFound = undefined; paint(); draw(); loadAdminPhone(); } } }, '관리자'))].filter(Boolean));
     };
     paint(); loadAdminPhone(); bg.append(sheet); document.getElementById('app').append(bg);
   }
   // 작성자 수정 화면 (접수할 때 정한 PIN 으로 확인된 뒤에만 열린다)
-  function openEdit(r, pin, bg) {
+  function openEdit(r, pin, bg, hf) { // hf: 주운 물건이면 본인 것만 볼 수 있는 사진·세부 내용
     bg.replaceChildren();
     const sheet = h('div', { class: 'sheet', role: 'dialog', 'aria-label': '내 글 수정' });
     let category = r.category, lostFound = r.lostFound || '분실', photo = null;
-    const ta = h('textarea', { maxlength: 1000 }); ta.value = r.detail || '';
+    const ta = h('textarea', { maxlength: 1000 }); ta.value = (hf ? hf.detail : r.detail) || '';
     const cats = h('div', { class: 'cats', role: 'radiogroup' });
     const lf = h('div', { class: 'seg' });
     const drawCats = () => {
@@ -197,7 +197,7 @@ export function board() {
     };
     const photoBox = h('label', { class: 'photo' });
     const input = h('input', { type: 'file', accept: 'image/*' });
-    const renderPhoto = () => { const src = photo || r.photo; photoBox.replaceChildren(src ? h('img', { src, alt: '사진' }) : h('div', {}, h('div', { style: 'font-size:28px' }, '📷'), h('div', {}, '사진 찍기 / 선택')), input); };
+    const renderPhoto = () => { const src = photo || (hf ? hf.photo : r.photo); photoBox.replaceChildren(src ? h('img', { src, alt: '사진' }) : h('div', {}, h('div', { style: 'font-size:28px' }, '📷'), h('div', {}, '사진 찍기 / 선택')), input); };
     input.addEventListener('change', async () => { const f = input.files[0]; if (!f) return; try { photo = await shrinkImage(f); renderPhoto(); } catch (e) { toast(e.message); } });
     const save = h('button', { class: 'btn block', type: 'button' }, '저장');
     save.addEventListener('click', async () => {
@@ -205,7 +205,7 @@ export function board() {
       if (!category) { toast('항목을 골라 주세요.'); return; }
       if (category === '기타' && !detail && !r.itemDesc) { toast('기타는 내용을 적어 주세요.'); ta.focus(); return; }
       save.disabled = true;
-      try { const u = await api.update(r.id, pin, { category, detail, lostFound: r.kind === '분실물' ? lostFound : null, photo }); Object.assign(r, u); draw(); bg.remove(); toast('수정했어요.'); }
+      try { const u = await api.update(r.id, pin, { category, detail, lostFound: r.kind === '분실물' ? lostFound : null, photo }); if (hf) { delete u.detail; delete u.photo; } Object.assign(r, u); draw(); bg.remove(); toast('수정했어요.'); }
       catch (e) { toast(e.message); save.disabled = false; }
     });
     const del = h('button', { class: 'btn block ghost', type: 'button', style: 'margin-top:10px;color:#c0392b;border-color:#c0392b', onClick: async () => {

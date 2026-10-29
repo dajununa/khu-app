@@ -60,7 +60,7 @@ const cleanPhone = v => { const t = String(v ?? '').replace(/[\s]/g, ''); return
 const isFound = r => r.kind === '분실물' && r.lostFound === '습득';
 const pub = ({ ownerPin, phone, ...r }) => { // 작성자 PIN, 비공개 전화번호, 주운 물건의 사진·위치는 응답에 싣지 않는다 (관리자만)
   const o = r.phonePublic && phone ? { ...r, phone } : r;
-  return isFound(o) ? { ...o, photo: null, shot: null, locationLabel: '', pin: { found: o.pin?.found || '' } } : o;
+  return isFound(o) ? { ...o, photo: null, shot: null, detail: '', locationLabel: '', pin: { found: o.pin?.found || '' } } : o;
 };
 const okAdmin = req => req.headers['x-admin-pin'] === ADMIN_PIN;
 const okOwner = (req, r) => !!r.ownerPin && req.headers['x-owner-pin'] === r.ownerPin;
@@ -122,10 +122,11 @@ export function reportsApi() {
         const r = rows.find(x => x.id === id);
         return r ? send(res, 200, { phone: r.phone || '', phonePublic: !!r.phonePublic }) : send(res, 404, { error: 'not found' });
       }
-      if (req.method === 'GET' && id && url.pathname.endsWith('/found')) { // 관리자만: 주운 물건의 사진·위치
-        if (!okAdmin(req)) return send(res, 403, { error: 'PIN이 올바르지 않습니다.' });
+      if (req.method === 'GET' && id && url.pathname.endsWith('/found')) { // 관리자(또는 작성자 본인)만: 주운 물건의 사진·위치·세부 내용
         const r = rows.find(x => x.id === id);
-        return r ? send(res, 200, { photo: r.photo, shot: r.shot, label: r.locationLabel, pin: r.pin }) : send(res, 404, { error: 'not found' });
+        if (!r) return send(res, 404, { error: 'not found' });
+        if (!okAdmin(req) && !okOwner(req, r)) return send(res, 403, { error: 'PIN이 올바르지 않습니다.' });
+        return send(res, 200, { photo: r.photo, shot: r.shot, label: r.locationLabel, pin: r.pin, detail: r.detail || '' });
       }
       if (req.method === 'POST' && id && url.pathname.endsWith('/verify')) {
         const r = rows.find(x => x.id === id);
