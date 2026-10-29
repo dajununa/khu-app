@@ -36,7 +36,7 @@ export function report() {
   const isLost = draft.kind === '분실물';
   const itemIn = h('textarea', { class: 'sm', rows: 2, maxlength: 200, placeholder: '예: 검은색 가죽 지갑, 안에 학생증이 있어요', onInput: () => { draft.itemDesc = itemIn.value; } });
   itemIn.value = draft.itemDesc || '';
-  const phoneIn = h('input', { class: 'sm', type: 'tel', inputmode: 'numeric', maxlength: 13, autocomplete: 'off', placeholder: '010-xxxx-xxxx', 'aria-label': '전화번호 (선택)' });
+  const phoneIn = h('input', { class: 'sm', type: 'tel', inputmode: 'numeric', maxlength: 13, autocomplete: 'off', placeholder: '010-xxxx-xxxx', 'aria-label': draft.lostFound === '분실' ? '전화번호 (필수)' : '전화번호 (선택)' });
   phoneIn.value = draft.phone || '';
   // 010- 은 미리 채워 두고, 그 뒤 숫자만 받는다. 3자리 뒤에 대시가 붙고, 4자리째를 치면 4-4 로, 7자리에서 멈추면 3-4 로 정리된다.
   const phoneDigits = v => { let d = v.replace(/\D/g, ''); if (d.startsWith('010')) d = d.slice(3); return d.slice(0, 8); };
@@ -109,6 +109,7 @@ export function report() {
     if (!draft.category) { toast('항목을 먼저 골라 주세요.'); catsEl.scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
     const itemDesc = itemIn.value.trim(), phone = phoneValue();
     if (isLost && !itemDesc) { toast('물품 설명을 적어 주세요.'); itemIn.focus(); return; }
+    if (isLost && draft.lostFound === '분실' && !phone) { toast('잃어버린 물건은 전화번호를 꼭 적어 주세요.'); phoneIn.focus(); return; }
     if (isLost && phone && !/^010-\d{3,4}-\d{4}$/.test(phone)) { toast('전화번호를 다시 확인해 주세요.'); phoneIn.focus(); return; }
     if (!isLost && draft.category === '기타' && !detail) { toast('기타는 내용을 적어 주세요.'); ta.focus(); return; }
     if (!/^\d{4}$/.test(pinIn.value)) { toast('수정·삭제용 PIN 숫자 4자리를 입력해 주세요.'); pinIn.focus(); return; }
@@ -130,7 +131,7 @@ export function report() {
     isLost ? h('div', {}, h('span', { class: 'lbl' }, '물품 설명'), itemIn) : null,
     isLost ? h('div', { class: 'smallgrp' },
       h('div', {}, h('span', { class: 'lbl s' }, '추가 설명 (선택)'), ta, cnt),
-      h('div', {}, h('span', { class: 'lbl s' }, '전화번호 (선택)'), phoneIn, visWrap)) : null,
+      h('div', {}, h('span', { class: 'lbl s' }, draft.lostFound === '분실' ? '전화번호 (필수)' : '전화번호 (선택)'), phoneIn, visWrap)) : null,
     h('div', {}, h('span', { class: 'lbl' }, '직접 찍은 사진 (선택)'), photoBox),
     isLost ? null : h('div', {}, h('span', { class: 'lbl' }, '세부 내용 (선택)'), ta, cnt),
     h('div', {}, h('span', { class: 'lbl' }, '수정·삭제용 PIN (필수)'), pinIn, h('p', { class: 'hint', style: 'margin:6px 0 0' }, '나중에 내 글을 고치거나 지울 때 써요. 잊어버리면 찾을 수 없으니 기억해 두세요.')),

@@ -98,13 +98,14 @@ export function board() {
     list.replaceChildren(...(shown.length ? shown.map(card) : [h('div', { class: 'empty' }, h('b', {}, '접수된 내용이 없어요'), q ? '검색 결과가 없어요. 관리번호를 다시 확인해 보세요.' : '홈에서 층을 골라 첫 신고를 남겨 보세요.')]));
   }
   function card(r) {
-    const img = r.photo; // 썸네일은 항상 사용자가 올린 사진 (없으면 '사진 없음')
+    const hid = isLostRow(r) && r.lostFound === '습득'; // 주운 물건의 사진·위치는 관리자만
+    const img = hid ? null : r.photo; // 썸네일은 항상 사용자가 올린 사진 (없으면 '사진 없음')
     const el = h('button', { class: `item ${nav.justAdded === r.id ? 'new' : ''}`, onClick: () => openSheet(r) },
-      img ? shotView(r, img, 'th', '') : h('div', { class: 'th none' }, '사진 없음'),
+      img ? shotView(r, img, 'th', '') : h('div', { class: 'th none' }, hid ? '🔒 관리자만' : '사진 없음'),
       h('div', { class: 'body' },
         h('div', { class: 'row' }, codeTag(r), h('span', { class: 'kind' }, tagText(r)), badge(r), h('span', { class: 'dt' }, ago(r.createdAt))),
         r.likes ? h('div', { class: 'lk' }, `♥ ${r.likes}`) : null,
-        sessionStorage.getItem('khu_pin') ? h('div', { class: 'loc1' }, r.locationLabel || '위치 정보 없음') : null,
+        sessionStorage.getItem('khu_pin') && !hid ? h('div', { class: 'loc1' }, r.locationLabel || '위치 정보 없음') : null,
         r.itemDesc || r.detail ? h('div', { class: 'tx' }, r.itemDesc || r.detail) : null));
     return el;
   }
@@ -115,7 +116,9 @@ export function board() {
     const before = lost ? r.photo : r.shot || r.photo; // 분실물의 '물품 사진'은 직접 올린 사진만 (핀한 화면으로 대신하지 않는다)
     const sheet = h('div', { class: 'sheet', role: 'dialog', 'aria-label': '신고 상세' });
     // 연락처: 작성자가 공개로 정했으면 누구나, 비공개면 관리자(PIN 입력)만 본다
-    let adminPhone;
+    let adminPhone, adminFound;
+    const hid = r.kind === '분실물' && r.lostFound === '습득'; // 주운 물건: 사진·위치는 관리자(PIN)만 본다
+    const fd = () => (admin() ? adminFound : null);
     const phoneLine = () => {
       const adm = admin() ? adminPhone : null;
       const num = r.phonePublic && r.phone ? r.phone : adm?.phone;
@@ -127,6 +130,7 @@ export function board() {
       if (!admin() || r.kind !== '분실물' || adminPhone !== undefined) return;
       adminPhone = null;
       try { adminPhone = await api.getPhone(r.id, admin()); paint(); } catch { /* PIN이 틀리면 아래 다른 동작이 알려 준다 */ }
+      if (hid && adminFound === undefined) { adminFound = null; try { adminFound = await api.getFound(r.id, admin()); paint(); } catch { /* 같은 이유 */ } }
     };
     const paint = () => {
       sheet.replaceChildren(...[
@@ -138,28 +142,32 @@ export function board() {
             setLiked(r.id, on); r.likes = Math.max(0, (r.likes || 0) + d); paint(); draw();
             try { const u = await api.like(r.id, d); r.likes = u.likes; } catch { setLiked(r.id, !on); r.likes = Math.max(0, r.likes - d); toast('공감에 실패했어요.'); }
             paint(); draw(); } }, `${liked(r.id) ? '♥' : '♡'} 공감 ${r.likes || 0}`)),
-        admin() ? h('h2', { style: 'font-size:18px;margin-top:8px' }, r.locationLabel || '위치 정보 없음') : null,
+        admin() ? h('h2', { style: 'font-size:18px;margin-top:8px' }, (hid ? fd()?.label : r.locationLabel) || '위치 정보 없음') : null,
         h('div', { class: `steps ${lost ? 'two' : ''}` }, stepsOf(r).map((st, i) => h('div', { class: i <= stIdx(r) ? 'on' : '' }, st))),
         r.itemDesc ? h('p', { style: 'font-weight:700;margin-bottom:4px' }, r.itemDesc) : null,
         r.detail ? h('p', { style: r.itemDesc ? 'font-size:14px;color:var(--muted);margin-top:0' : '' }, r.detail) : null,
         phoneLine(),
-        lost && (r.lostFound === '습득' || r.shot) // 주운 물건은 항상, 잃어버린 물건은 핀을 찍은 경우에만 두 칸
-          ? h('div', { class: 'ba' }, // 주운 물건: 물품 사진 + 핀한 위치를 나란히. 없는 쪽은 안내 문구
+        hid
+          ? h('div', { class: 'ba' }, // 주운 물건: 관리자만 물품 사진과 핀한 위치를 본다. 그 밖에는 잠금 안내
+              h('figure', {}, !fd() ? h('div', { class: 'ph' }, '🔒', h('br'), '관리자만 확인할 수 있어요') : fd().photo ? shotView({ ...r, shot: null }, fd().photo, 'bimg', '물품 사진') : h('div', { class: 'ph' }, '사진 없음'), h('figcaption', {}, '물품 사진')),
+              h('figure', {}, !fd() ? h('div', { class: 'ph' }, '🔒', h('br'), '관리자만 확인할 수 있어요') : fd().shot ? shotView({ ...r, shot: fd().shot }, fd().shot, 'bimg', '핀한 위치') : h('div', { class: 'ph' }, '위치 없음', h('br'), '행정실에 문의'), h('figcaption', {}, '핀한 위치')))
+        : lost && r.shot // 잃어버린 물건은 핀을 찍은 경우에만 두 칸
+          ? h('div', { class: 'ba' },
               h('figure', {}, r.photo ? shotView(r, r.photo, 'bimg', '물품 사진') : h('div', { class: 'ph' }, '사진 없음'), h('figcaption', {}, '물품 사진')),
-              h('figure', {}, r.shot ? shotView(r, r.shot, 'bimg', '핀한 위치') : h('div', { class: 'ph' }, '위치 없음', h('br'), '행정실에 문의'), h('figcaption', {}, '핀한 위치')))
+              h('figure', {}, shotView(r, r.shot, 'bimg', '핀한 위치'), h('figcaption', {}, '핀한 위치')))
         : lost
           ? h('div', { class: 'imgs' }, h('figure', {}, before ? shotView(r, before, 'bimg', '물품 사진') : h('div', { class: 'ph' }, '사진 없음'), h('figcaption', {}, '물품 사진')))
           : h('div', { class: 'ba' },
           h('figure', {}, before ? shotView(r, before, 'bimg', '처리 전') : h('div', { class: 'ph' }, '사진 없음'), h('figcaption', {}, '처리 전')),
           h('figure', {}, r.afterPhoto ? h('img', { src: r.afterPhoto, alt: '처리 후' }) : h('div', { class: 'ph dash' }, r.status === '완료' ? '처리 후 사진 준비 중' : '완료되면 처리 후 사진이 올라와요'), h('figcaption', {}, '처리 후'))),
-        lost && r.lostFound !== '습득' && !r.shot ? h('div', { class: 'locinfo' }, '📍 ', h('b', {}, r.locationLabel || '위치 정보 없음'), h('small', {}, r.pin?.scope === 'all' ? ' · 정확한 위치는 몰라요' : r.pin?.scope === 'floor' ? ' · 층만 알아요' : '')) : null,
+        lost && !hid && !r.shot ? h('div', { class: 'locinfo' }, '📍 ', h('b', {}, r.locationLabel || '위치 정보 없음'), h('small', {}, r.pin?.scope === 'all' ? ' · 정확한 위치는 몰라요' : r.pin?.scope === 'floor' ? ' · 층만 알아요' : '')) : null,
         admin() && !lost ? h('label', { class: 'btn block ghost', style: 'margin:0 0 12px;text-align:center;display:block;line-height:20px' }, r.afterPhoto ? '처리 후 사진 바꾸기 (관리자)' : '처리 후 사진 올리기 (관리자)',
           h('input', { type: 'file', accept: 'image/*', style: 'display:none', onChange: async e => {
             const f = e.target.files[0]; if (!f) return;
             try { const u = await api.setAfterPhoto(r.id, await shrinkImage(f), admin()); Object.assign(r, u); paint(); draw(); toast('처리 후 사진을 올렸어요.'); }
             catch (err) { toast(err.message); if (/PIN/.test(err.message)) sessionStorage.removeItem('khu_pin'), paint(); } } })) : null,
         lost ? null : h('div', { class: 'imgs' }, r.photo && r.shot ? h('figure', {}, h('img', { src: r.photo, alt: '신고 사진' }), h('figcaption', {}, '현장 사진')) : null, null),
-        admin() && r.pin?.waypoint ? h('button', { class: 'btn block ghost', onClick: () => { bg.remove(); goTour({ scene: r.pin.scene, floor: r.pin.floor, waypointId: r.pin.waypoint, yaw: r.pin.yaw, pitch: r.pin.pitch, mode: 'view' }); } }, '📍 3D로 위치 보기') : null,
+        admin() && (hid ? fd()?.pin : r.pin)?.waypoint ? h('button', { class: 'btn block ghost', onClick: () => { const pn = hid ? fd().pin : r.pin; bg.remove(); goTour({ scene: pn.scene, floor: pn.floor, waypointId: pn.waypoint, yaw: pn.yaw, pitch: pn.pitch, mode: 'view' }); } }, '📍 3D로 위치 보기') : null,
         admin()
           ? h('div', { class: 'admin' }, h('span', { class: 'lbl' }, '처리 상태 변경 (관리자)'), h('div', { class: `seg ${lost ? 'two' : ''}` }, stepsOf(r).map(s => h('button', { class: s === stName(r) ? 'on' : '', onClick: async () => {
               try { const u = await api.setStatus(r.id, stSave(r, s), admin()); Object.assign(r, u); paint(); draw(); } catch (e) { toast(e.message); if (/PIN/.test(e.message)) sessionStorage.removeItem('khu_pin'), paint(); } } }, s))),
@@ -170,7 +178,7 @@ export function board() {
           : h('div', { style: 'display:flex;gap:14px;flex-wrap:wrap' }, h('button', { class: 'linkbtn', onClick: async () => {
               const p = prompt('접수할 때 정한 PIN 4자리를 입력하세요'); if (!p) return;
               try { await api.verifyOwner(r.id, p.trim()); openEdit(r, p.trim(), bg); } catch (e) { toast(e.message); } } }, '✏️ 내 글 수정·삭제'),
-            h('button', { class: 'linkbtn', onClick: () => { const p = prompt('관리자 PIN을 입력하세요'); if (p) { sessionStorage.setItem('khu_pin', p); adminPhone = undefined; paint(); draw(); loadAdminPhone(); } } }, '관리자'))].filter(Boolean));
+            h('button', { class: 'linkbtn', onClick: () => { const p = prompt('관리자 PIN을 입력하세요'); if (p) { sessionStorage.setItem('khu_pin', p); adminPhone = undefined; adminFound = undefined; paint(); draw(); loadAdminPhone(); } } }, '관리자'))].filter(Boolean));
     };
     paint(); loadAdminPhone(); bg.append(sheet); document.getElementById('app').append(bg);
   }

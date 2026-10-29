@@ -57,7 +57,11 @@ const readBody = (req) => new Promise((res, rej) => {
 const send = (res, code, obj) => { res.statusCode = code; res.setHeader('Content-Type', 'application/json; charset=utf-8'); res.end(JSON.stringify(obj)); };
 const str = (v, max) => String(v ?? '').slice(0, max);
 const cleanPhone = v => { const t = String(v ?? '').replace(/[\s]/g, ''); return /^010-\d{3,4}-\d{4}$/.test(t) ? t : ''; };
-const pub = ({ ownerPin, phone, ...r }) => (r.phonePublic && phone ? { ...r, phone } : r); // 작성자 PIN, 비공개 전화번호는 응답에 싣지 않는다
+const isFound = r => r.kind === '분실물' && r.lostFound === '습득';
+const pub = ({ ownerPin, phone, ...r }) => { // 작성자 PIN, 비공개 전화번호, 주운 물건의 사진·위치는 응답에 싣지 않는다 (관리자만)
+  const o = r.phonePublic && phone ? { ...r, phone } : r;
+  return isFound(o) ? { ...o, photo: null, shot: null, locationLabel: '', pin: { found: o.pin?.found || '' } } : o;
+};
 const okAdmin = req => req.headers['x-admin-pin'] === ADMIN_PIN;
 const okOwner = (req, r) => !!r.ownerPin && req.headers['x-owner-pin'] === r.ownerPin;
 const fails = new Map(); // PIN 무작위 대입 방지: IP당 10분에 20번
@@ -82,7 +86,7 @@ export function reportsApi() {
       const id = url.pathname.split('/')[3];
 
       if (req.method === 'GET' && !id) return send(res, 200, rows.slice().reverse().map(pub));
-      if (req.method === 'GET' && id && !url.pathname.endsWith('/phone')) {
+      if (req.method === 'GET' && id && !url.pathname.endsWith('/phone') && !url.pathname.endsWith('/found')) {
         const r = rows.find(x => x.id === id); return r ? send(res, 200, pub(r)) : send(res, 404, { error: 'not found' });
       }
       if (req.method === 'POST' && !id) {
@@ -90,6 +94,7 @@ export function reportsApi() {
         const b = await readBody(req);
         const kind = KINDS.includes(b.kind) ? b.kind : null;
         const detail = str(b.detail, 1000).trim();
+        const lostFound = ['분실', '습득'].includes(b.lostFound) ? b.lostFound : null;
         if (!kind) return send(res, 400, { error: '유형이 올바르지 않습니다.' });
         const category = str(b.category, 20).trim() || '기타';
         const itemDesc = kind === '분실물' ? str(b.itemDesc, 200).trim() : '';
@@ -97,9 +102,9 @@ export function reportsApi() {
         if (category === '기타' && !detail && !itemDesc) return send(res, 400, { error: '기타는 내용을 적어 주세요.' });
         const phone = kind === '분실물' ? cleanPhone(b.phone) : '';
         if (kind === '분실물' && b.phone && !phone) return send(res, 400, { error: '전화번호 형식이 올바르지 않습니다.' });
+        if (kind === '분실물' && lostFound === '분실' && !phone) return send(res, 400, { error: '잃어버린 물건은 전화번호를 꼭 적어 주세요.' });
         if (!/^\d{4}$/.test(String(b.ownerPin ?? ''))) return send(res, 400, { error: '수정·삭제용 PIN 4자리를 입력해 주세요.' });
         const w = b.pin || {};
-        const lostFound = ['분실', '습득'].includes(b.lostFound) ? b.lostFound : null;
         const row = {
           ownerPin: String(b.ownerPin),
           code: nextCode(rows, { kind, lostFound }),
@@ -116,6 +121,11 @@ export function reportsApi() {
         if (!okAdmin(req)) return send(res, 403, { error: 'PIN이 올바르지 않습니다.' });
         const r = rows.find(x => x.id === id);
         return r ? send(res, 200, { phone: r.phone || '', phonePublic: !!r.phonePublic }) : send(res, 404, { error: 'not found' });
+      }
+      if (req.method === 'GET' && id && url.pathname.endsWith('/found')) { // 관리자만: 주운 물건의 사진·위치
+        if (!okAdmin(req)) return send(res, 403, { error: 'PIN이 올바르지 않습니다.' });
+        const r = rows.find(x => x.id === id);
+        return r ? send(res, 200, { photo: r.photo, shot: r.shot, label: r.locationLabel, pin: r.pin }) : send(res, 404, { error: 'not found' });
       }
       if (req.method === 'POST' && id && url.pathname.endsWith('/verify')) {
         const r = rows.find(x => x.id === id);
