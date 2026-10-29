@@ -62,7 +62,7 @@ export function lostWhere() {
 }
 
 export function home() {
-  const X = 22, W = 264, FH = 62, TOP = 62, GROUND = TOP + FH * 5;
+  const X = 22, W = 264, FH = 62, TOP = 62, GROUND = TOP + FH * FLOORS.filter(f => f.id !== 'B1').length; // 지상 층 수만큼 내려온 자리가 땅
   const floors = FLOORS.map((f, i) => {
     const y = TOP + FH * i, b1 = f.id === 'B1', scanned = !!SCANNED[f.id];
     const isMain = f.id === '1F'; // 1층은 가운데(오른쪽에서 세 번째) 창을 빼고 그 자리에 출입문을 둔다

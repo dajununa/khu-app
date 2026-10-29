@@ -1,5 +1,6 @@
 // 층/스캔 설정. 스캔이 있는 층만 scene 을 지정한다.
 export const FLOORS = [
+  { id: '6F', name: '6층' },
   { id: '5F', name: '5층' },
   { id: '4F', name: '4층' },
   { id: '3F', name: '3층' },
@@ -35,7 +36,7 @@ export const CATEGORIES = {
 };
 
 // 층 사이 계단 [아랫층, 윗층]. 위에서부터. 3D 스캔이 있는 계단은 STAIR_SCANNED (waypoints 의 stair 값과 같은 문자열).
-export const STAIR_PAIRS = [['4F', '5F'], ['3F', '4F'], ['2F', '3F'], ['1F', '2F'], ['B1', '1F']];
+export const STAIR_PAIRS = [['5F', '6F'], ['4F', '5F'], ['3F', '4F'], ['2F', '3F'], ['1F', '2F'], ['B1', '1F']];
 export const STAIR_SCANNED = ['1F-2F', '2F-3F', '3F-4F'];
 const num = id => (id === 'B1' ? 'B1' : id.replace('F', ''));
 export const stairName = ([lo, hi]) => `${num(lo)}–${num(hi)}층 계단`;
