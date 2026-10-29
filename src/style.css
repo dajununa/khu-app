@@ -358,3 +358,6 @@ textarea.sm { resize: vertical; min-height: 54px; }
 
 .locinfo { margin: 8px 0 12px; font-size: 14px; }
 .locinfo small { color: var(--muted); font-size: 12px; }
+
+.choose .apptitle { font-size: 30px; letter-spacing: -.02em; color: var(--accent); }
+.choose .home-head .lead { margin: 6px 0 4px; font-size: 17px; font-weight: 700; opacity: 1; }

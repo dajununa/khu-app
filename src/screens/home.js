@@ -31,7 +31,8 @@ export function choose() {
   return h('div', { class: 'choose' },
     h('div', { class: 'home-head' },
       h('div', { class: 'kickrow' }, h('div', { class: 'kicker' }, '경희대학교 · 생활과학대학'), h('button', { class: 'helpbtn', type: 'button', 'aria-haspopup': 'dialog', onClick: openHelp }, h('span', { class: 'q' }, '?'), '도움말')),
-      h('h1', {}, '무엇을 신고할까요?')),
+      h('h1', { class: 'apptitle' }, 'KHU 생생신고'),
+      h('p', { class: 'lead' }, '무엇을 신고할까요?')),
     h('div', { class: 'choices' }, big('하자', '🛠️', '누수·조명·파손 등 건물 안전 문제'), big('분실물', '🎒', '잃어버렸거나 주운 물건')));
 }
 
