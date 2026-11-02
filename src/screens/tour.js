@@ -101,10 +101,14 @@ export async function openTour(host, opts, cb) {
   let yaw, pitch; // 보정 기준 값. 저장·외부 값(opts, 핀)은 스캔 기준이라 바꿔서 쓴다
   if (opts.yaw != null) ({ yaw, pitch } = toLevel(L, opts.yaw, opts.pitch ?? 0));
   else { ({ yaw } = toLevel(L, cur.heading, 0)); pitch = L ? 0 : opts.pitch ?? 0; } // 보정 중이면 기본 시선은 수평
-  let pinWorld = null; // 신고 때 핀한 자리: 처음 지점에서 핀 방향으로 3m 떨어진 한 점에 고정 (이동해도 따라오지 않는다)
+  let pinWorld = null; // 신고 때 핀한 자리: 처음 지점에서 핀 방향의 한 점에 고정 (이동해도 따라오지 않는다)
   if (opts.mode === 'view' && opts.yaw != null) {
     const r = Math.PI / 180, d = [-Math.sin(opts.yaw * r) * Math.cos((opts.pitch ?? 0) * r), Math.cos(opts.yaw * r) * Math.cos((opts.pitch ?? 0) * r), Math.sin((opts.pitch ?? 0) * r)];
-    pinWorld = cur.pos.map((v, i) => v + d[i] * 3);
+    // 깊이는 저장돼 있지 않아서 추정한다: 아래를 보고 찍은 핀(바닥·바닥 위 물건)은 바닥 평면과 만나는 거리(눈높이 1.35m 기준),
+    // 수평에 가깝게 찍은 핀은 3m. 예전처럼 늘 3m 로 두면 아래를 본 핀이 바닥 밑으로 들어가 이동할 때 미끄러져 보였다.
+    const dn = d[0] * nUp[0] + d[1] * nUp[1] + d[2] * nUp[2];
+    const dist = dn < -0.17 ? Math.min(8, 1.35 / -dn) : 3;
+    pinWorld = cur.pos.map((v, i) => v + d[i] * dist);
   }
   let moving = null, arrows = [];
   const tmp = new pc.Vec3(), tmp2 = new pc.Vec3();

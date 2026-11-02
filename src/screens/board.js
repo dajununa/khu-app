@@ -130,7 +130,11 @@ export function board() {
       if (!admin() || r.kind !== '분실물' || adminPhone !== undefined) return;
       adminPhone = null;
       try { adminPhone = await api.getPhone(r.id, admin()); paint(); } catch { /* PIN이 틀리면 아래 다른 동작이 알려 준다 */ }
-      if (hid && adminFound === undefined) { adminFound = null; try { adminFound = await api.getFound(r.id, admin()); paint(); } catch { /* 같은 이유 */ } }
+      if (hid && adminFound === undefined) { // 관리자 조회 함수가 아직 없거나 옮기기 전의 글이면 글에 남아 있는 값을 그대로 쓴다
+        adminFound = null;
+        try { adminFound = await api.getFound(r.id, admin()); } catch { adminFound = { photo: r.photo, shot: r.shot, label: r.locationLabel, pin: r.pin, detail: r.detail }; }
+        paint();
+      }
     };
     const paint = () => {
       sheet.replaceChildren(...[
