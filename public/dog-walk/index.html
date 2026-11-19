@@ -14,10 +14,12 @@
   button,input{font:inherit;letter-spacing:inherit;color:inherit}
   #app{height:100dvh;max-width:480px;margin:0 auto;display:flex;flex-direction:column;position:relative;overflow:hidden}
 
-  .top{display:flex;align-items:center;gap:10px;padding:11px 14px 10px;border-bottom:2px solid var(--ink);white-space:nowrap}
-  .status{display:flex;align-items:center;gap:5px;font-size:12px;font-weight:800;min-width:0;overflow:hidden;text-overflow:ellipsis}
+  .top{display:flex;align-items:center;gap:6px;padding:11px 12px 10px;border-bottom:2px solid var(--ink);white-space:nowrap}
+  .status{display:flex;align-items:center;gap:4px;font-size:11px;flex:0 0 auto;font-weight:800;min-width:0;overflow:hidden;text-overflow:ellipsis}
   .status svg{flex:0 0 auto}
-  .wx{margin-left:auto;display:flex;align-items:center;gap:4px;font-size:11px;font-weight:600}
+  .back{background:none;border:0;padding:0 2px 0 0;margin:0;font:800 18px/1 Pretendard,sans-serif;cursor:pointer;color:var(--ink)}
+  #app.walking .back{visibility:hidden}
+  .wx{margin-left:auto;display:flex;align-items:center;gap:3px;font-size:10px;min-width:0;overflow:hidden;font-weight:600}
   .wx .sl{color:var(--mute)}
 
   #map{flex:1;background:#ECECEA;min-height:0}
@@ -55,7 +57,8 @@
 
   .sheet{padding:16px 18px calc(16px + env(safe-area-inset-bottom));border-top:2px solid var(--ink)}
   .label{font-size:11px;font-weight:600;letter-spacing:-0.01em;margin-bottom:6px}
-  .label button{background:none;border:0;padding:0;font-weight:800;text-decoration:underline;text-underline-offset:2px;cursor:pointer}
+  .label button{background:none;border:1.5px solid var(--ink);padding:2px 5px 2px;font:800 11px/1 Pretendard,sans-serif;letter-spacing:-0.01em;cursor:pointer;margin-right:2px}
+  .label button:hover{background:var(--ink);color:#fff}
   .label .warn{color:var(--red)}
   .km{font-size:72px;font-weight:800;letter-spacing:-0.06em;line-height:.85;margin-left:-3px}
   .km small{font-size:24px;letter-spacing:-0.03em;margin-left:4px}
@@ -79,6 +82,7 @@
 <body>
 <div id="app">
   <div class="top">
+    <button class="back" id="back" aria-label="견종 다시 고르기">←</button>
     <div class="status" id="status">날씨 확인 중</div>
     <div class="wx" id="wx"></div>
   </div>
@@ -375,7 +379,7 @@ function drawCourse(km){
 
 function labelHTML(rest){
   const mins = S.mins>=60 && S.mins%60===0 ? `${S.mins/60}시간` : `${S.mins}분`;
-  let s = `<button id="breedBtn">${BREEDS[S.breed].name}</button> / ${mins} / ${rest}`;
+  let s = `<button id="breedBtn">${BREEDS[S.breed].name} 변경</button> / ${mins} / ${rest}`;
   if(S.alt>0) s += ` <span class="warn">/ ${S.alt}시 출발 추천</span>`;
   if(S.alt===-1) s += ` <span class="warn">/ 오늘은 쉬어요</span>`;
   return s;
@@ -409,12 +413,17 @@ $('customIn').addEventListener('change', e=>{
   setMins(m);
 });
 
-$('label').addEventListener('click', e=>{ if(e.target.id==='breedBtn') $('pick').style.display = 'flex'; });
+function openPick(){ $('pick').style.display = 'flex'; }
+function goBack(){ if(history.state && history.state.map) history.back(); else openPick(); }
+$('label').addEventListener('click', e=>{ if(e.target.id==='breedBtn') goBack(); });
+$('back').addEventListener('click', goBack);
+window.addEventListener('popstate', ()=>{ if(!W.on) openPick(); else history.pushState({map:1}, ''); });
 $('pick').addEventListener('click', e=>{
   const b = e.target.closest('button'); if(!b) return;
   S.breed = b.dataset.b;
   try{ localStorage.setItem('dw-breed', S.breed); }catch(err){}
   $('pick').style.display = 'none';
+  if(!(history.state && history.state.map)) history.pushState({map:1}, '');
   renderWeather();
   findRoute();
 });
